@@ -11,14 +11,90 @@ datasource db {
 }
 
 // ====================
+// BETTER AUTH MODELS
+// ====================
+// Required by Better Auth for email/password and OAuth authentication.
+// These models are managed by Better Auth — do not modify fields directly.
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  emailVerified Boolean @default(false)
+  image         String?
+
+  sessions Session[]
+  accounts Account[]
+
+  // Trading Journal relations (auth user owns all trading data)
+  tradingAccounts TradingAccount[]
+  trades          Trade[]
+  journalEntries  JournalEntry[]
+  reviews         Review[]
+
+  @@index([email])
+  @@map("user")
+}
+
+model Account {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Better Auth OAuth fields
+  providerId            String
+  accountId             String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+
+  // Required by Better Auth but never written by it
+  name String?
+  type String?
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ====================
 // ENUMS
 // ====================
-enum AccountType {
-  SIMULATION
-  PAPER_TRADING
-  LIVE
-  DEMO
-}
 
 enum TradeSide {
   LONG
@@ -45,49 +121,36 @@ enum JournalMood {
 }
 
 // ====================
-// CORE MODELS
+// TRADE JOURNAL DOMAIN MODELS
 // ====================
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  accounts       Account[]
-  trades         Trade[]
-  journalEntries JournalEntry[]
-  reviews        Review[]
-
-  @@index([email])
-}
-
-model Account {
-  id             String      @id @default(uuid())
+model TradingAccount {
+  id             String   @id @default(uuid())
   userId         String
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name           String // e.g., "Interactive Brokers - Main"
-  type           AccountType
-  currency       String      @default("USD")
-  initialBalance Decimal?    @db.Decimal(18, 2)
-  currentBalance Decimal?    @db.Decimal(18, 2)
-  isActive       Boolean     @default(true)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  type           String   @default("PAPER_TRADING") // SIMULATION, PAPER_TRADING, LIVE, DEMO
+  currency       String   @default("USD")
+  initialBalance Decimal? @db.Decimal(18, 2)
+  currentBalance Decimal? @db.Decimal(18, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   trades Trade[]
 
   @@index([userId])
   @@index([isActive, userId])
   @@index([currency])
+  @@map("trading_account")
 }
 
 model Trade {
-  id        String  @id @default(uuid())
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
+  tradingAccountId String
+  tradingAccount   TradingAccount @relation(fields: [tradingAccountId], references: [id], onDelete: Restrict)
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Trade direction
   side TradeSide
@@ -146,15 +209,15 @@ model Trade {
 
   // Indexes for query performance
   @@index([userId, status])
-  @@index([accountId, entryDate])
+  @@index([tradingAccountId, entryDate])
   @@index([entryDate])
   @@index([side, status])
   @@index([strategyId])
   @@index([setupId])
-  @@index([userId, entryDate]) // for user's trade history
-  @@index([userId, exitDate]) // for closed trades analysis
-  @@index([userId, side, status]) // filtered trade lists
-  @@index([netPnl]) // P&L analytics
+  @@index([userId, entryDate])
+  @@index([userId, exitDate])
+  @@index([userId, side, status])
+  @@index([netPnl])
 }
 
 model Execution {
@@ -171,14 +234,14 @@ model Execution {
 
   createdAt DateTime @default(now())
 
-  @@index([tradeId, datetime]) // for execution timeline
+  @@index([tradeId, datetime])
   @@index([datetime])
 }
 
 model Tag {
   id        String   @id @default(uuid())
   name      String   @unique
-  color     String? // hex color for UI (e.g., "#FF5733")
+  color     String?
   createdAt DateTime @default(now())
 
   trades TradeTag[] @relation("TradeTags")
@@ -250,9 +313,9 @@ model Attachment {
   journalEntry   JournalEntry? @relation("JournalAttachments", fields: [journalEntryId], references: [id], onDelete: Cascade)
 
   fileName   String
-  fileUrl    String // storage URL/path (S3, local, etc.)
-  fileSize   Int? // in bytes
-  mimeType   String? // MIME type (image/png, image/jpeg, etc.)
+  fileUrl    String
+  fileSize   Int?
+  mimeType   String?
   uploadedAt DateTime @default(now())
 
   // Application-level invariant: exactly one of (tradeId, journalEntryId) MUST be set.
@@ -280,8 +343,8 @@ model JournalEntry {
 
   entryDate DateTime     @unique // one journal entry per calendar day (UTC)
   mood      JournalMood?
-  energy    Int? // 1-10 scale
-  focus     Int? // 1-10 scale
+  energy    Int?
+  focus     Int?
   notes     String?
 
   createdAt DateTime @default(now())
@@ -301,7 +364,7 @@ model Review {
   title      String?
   reviewDate DateTime
   notes      String?
-  rating     Int? // 1-5 overall rating
+  rating     Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -320,19 +383,9 @@ model ReviewTrade {
   tradeId  String
   trade    Trade  @relation("ReviewTrades", fields: [tradeId], references: [id], onDelete: Restrict)
 
-  notes  String? // review notes for this specific trade
-  rating Int? // 1-5 rating for this trade in review
+  notes  String?
+  rating Int?
 
   @@unique([reviewId, tradeId])
   @@index([tradeId])
 }
-
-// ====================
-// HELPER VIEWS / INDEXES FOR ANALYTICS
-// ====================
-// Note: These would typically be materialized views or computed in application layer
-// But we add supporting indexes for common analytics queries
-
-// For performance analytics: trades by user, date range, P&L
-// For risk analytics: R-multiple distribution, win/loss rates
-// For strategy analytics: performance by strategy/setup
