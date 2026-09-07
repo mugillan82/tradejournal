@@ -1,45 +1,47 @@
 @import "tailwindcss";
 
 /* ── Brand design tokens ────────────────────────────────────── */
+/* All values use standard CSS numeric format — no unit-spacing bugs. */
 :root {
   /* Background */
-  --background: 222 47% 4%;      /* slate-950  — #0f172a */
-  --foreground: 215 25% 95%;    /* slate-100  — #f1f5f9 */
+  --background: 222 47% 4%;       /* slate-950 — hsl(222, 47%, 4%)  */
+  --foreground: 215 25% 95%;     /* slate-100 — hsl(215, 25%, 95%) */
 
   /* Primary (emerald) */
-  --primary:          160 84% 39%;   /* emerald-500  — #10b981 */
-  --primary-hover:    160 84% 45%;   /* emerald-400  — #34d399 */
-  --primary-active:   160 84% 32%;   /* emerald-600  — #059669 */
-  --primary-muted:   160 84% 39% / 0.12; /* bg tint */
+  --primary:         160 84% 39%;    /* emerald-500 — hsl(160, 84%, 39%) */
+  --primary-hover:   160 84% 45%;    /* emerald-400 — hsl(160, 84%, 45%) */
+  --primary-active:  160 84% 32%;    /* emerald-600 — hsl(160, 84%, 32%) */
+  --primary-muted:  160 84% 39% / 0.12;
 
   /* Surface variants */
-  --surface:          217 33% 10%;  /* slate-900  — #0f172a */
-  --surface-hover:    217 33% 13%;  /* slate-800/90 */
-  --border:           215 20% 22%;  /* slate-700  — #334155 */
-  --border-subtle:    215 20% 17%;  /* slate-800 */
+  --surface:        217 33% 10%;   /* slate-900 — hsl(217, 33%, 10%)  */
+  --surface-hover:  217 33% 13%;   /* slate-800 — hsl(217, 33%, 13%)  */
+  --border:         215 20% 22%;   /* slate-700 — hsl(215, 20%, 22%)  */
+  --border-subtle:  215 20% 17%;   /* slate-800 — hsl(215, 20%, 17%)  */
 
   /* Text */
-  --muted:            215 16% 55%;  /* slate-400  — #94a3b8 */
-  --muted-foreground: 215 16% 70%;  /* slate-300 */
+  --muted:            215 16% 55%;  /* slate-400 — hsl(215, 16%, 55%) */
+  --muted-foreground: 215 16% 70%; /* slate-300 — hsl(215, 16%, 70%) */
 
   /* Semantic */
   --destructive:      0 72% 51%;    /* red-600 */
-  --destructive-foreground: 0 72% 97%;
-  --warning:          38 92% 50%;   /* amber-500 */
-  --success:          160 84% 39%;  /* emerald-500 */
+  --destructive-fg:  0 72% 97%;
+  --warning:         38 92% 50%;    /* amber-500 */
+  --success:         160 84% 39%;  /* emerald-500 */
 }
 
 /* ── Tailwind @theme override ───────────────────────────────── */
 @theme inline {
-  --color-background: oklch(var(--background));
-  --color-foreground: oklch(var(--foreground));
-  --color-primary:          oklch(var(--primary));
-  --color-primary-hover:    oklch(var(--primary-hover));
-  --color-primary-active:   oklch(var(--primary-active));
-  --color-surface:          oklch(var(--surface));
-  --color-border:           oklch(var(--border));
-  --color-muted:            oklch(var(--muted));
-  --color-muted-foreground: oklch(var(--muted-foreground));
+  /* Consume HSL variables with hsl(), matching how they are defined above. */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary:         hsl(var(--primary));
+  --color-primary-hover:   hsl(var(--primary-hover));
+  --color-primary-active:  hsl(var(--primary-active));
+  --color-surface:         hsl(var(--surface));
+  --color-border:          hsl(var(--border));
+  --color-muted:           hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -55,8 +57,8 @@ html {
 }
 
 body {
-  background: oklch(var(--background));
-  color: oklch(var(--foreground));
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -65,7 +67,7 @@ body {
 
 /* ── Focus visible ───────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid oklch(var(--primary));
+  outline: 2px solid hsl(var(--primary));
   outline-offset: 2px;
 }
 
@@ -75,18 +77,18 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: oklch(var(--background));
+  background: hsl(var(--background));
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(var(--border));
+  background: hsl(var(--border));
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(var(--muted));
+  background: hsl(var(--muted));
 }
 
 /* ── Text selection ──────────────────────────────────────────── */
 ::selection {
-  background: oklch(var(--primary) / 0.25);
-  color: oklch(var(--foreground));
+  background: hsl(var(--primary) / 0.25);
+  color: hsl(var(--foreground));
 }
