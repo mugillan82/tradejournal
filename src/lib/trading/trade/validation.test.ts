@@ -299,10 +299,10 @@ describe("validateCreateTradeInput — invalid closed/open state", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Non-negative monetary fields
+// Non-negative monetary fields (costs)
 // ---------------------------------------------------------------------------
 
-describe("validateCreateTradeInput — monetary non-negativity", () => {
+describe("validateCreateTradeInput — monetary non-negativity (costs)", () => {
   it("fails when riskAmount is negative", () => {
     const result = validateCreateTradeInput({
       ...makeValidCreateTrade(),
@@ -329,11 +329,88 @@ describe("validateCreateTradeInput — monetary non-negativity", () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.some((e) => e.path === "fees")).toBe(true);
   });
+});
 
-  it("fails when swap is negative", () => {
+// ---------------------------------------------------------------------------
+// Signed monetary fields (P&L and swap)
+// ---------------------------------------------------------------------------
+
+describe("validateCreateTradeInput — signed monetary fields", () => {
+  it("accepts a negative grossPnl (losing trade)", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      grossPnl: "-150.75",
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("accepts a negative netPnl (losing trade after costs)", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      netPnl: "-152.25",
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("accepts a negative swap (financing paid)", () => {
     const result = validateCreateTradeInput({
       ...makeValidCreateTrade(),
       swap: "-0.10",
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("accepts a positive grossPnl (winning trade)", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      grossPnl: "250.00",
+    });
+    expect(result.isValid).toBe(true);
+  });
+
+  it("accepts zero P&L (breakeven trade)", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      grossPnl: "0",
+      netPnl: "0",
+    });
+    expect(result.isValid).toBe(true);
+  });
+
+  it("rejects a non-numeric grossPnl", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      grossPnl: "abc",
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some((e) => e.path === "grossPnl")).toBe(true);
+  });
+
+  it("rejects a non-numeric netPnl", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      netPnl: "xyz",
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some((e) => e.path === "netPnl")).toBe(true);
+  });
+
+  it("rejects a grossPnl with too many decimal places (>2)", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      grossPnl: "100.123",
+    });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some((e) => e.path === "grossPnl")).toBe(true);
+  });
+
+  it("rejects a swap with too many decimal places (>2)", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      swap: "-0.1005",
     });
     expect(result.isValid).toBe(false);
     expect(result.errors.some((e) => e.path === "swap")).toBe(true);
@@ -473,6 +550,27 @@ describe("validateUpdateTradeInput", () => {
       notes: "Updated trade",
     });
     expect(result.isValid).toBe(true);
+  });
+
+  it("accepts updating grossPnl to a negative value", () => {
+    const result = validateUpdateTradeInput({ grossPnl: "-200.50" });
+    expect(result.isValid).toBe(true);
+  });
+
+  it("accepts updating netPnl to a negative value", () => {
+    const result = validateUpdateTradeInput({ netPnl: "-205.00" });
+    expect(result.isValid).toBe(true);
+  });
+
+  it("accepts updating swap to a negative value", () => {
+    const result = validateUpdateTradeInput({ swap: "-1.25" });
+    expect(result.isValid).toBe(true);
+  });
+
+  it("rejects a non-numeric grossPnl in update", () => {
+    const result = validateUpdateTradeInput({ grossPnl: "bad" });
+    expect(result.isValid).toBe(false);
+    expect(result.errors.some((e) => e.path === "grossPnl")).toBe(true);
   });
 });
 

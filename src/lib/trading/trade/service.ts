@@ -73,6 +73,23 @@ function decimalToString(value: unknown): DecimalString | null {
 }
 
 /**
+ * Constructs a Prisma Decimal from a DecimalString.
+ *
+ * Uses the string constructor — no floating-point conversion, so exact
+ * precision is preserved for financial values. For example:
+ *   "100.1234567890" → Prisma.Decimal("100.1234567890")
+ *
+ * Returns null when the input is null or undefined.
+ */
+function decimalFromString(
+  value: DecimalString | null | undefined,
+): Prisma.Decimal | null {
+  if (value === null || value === undefined) return null;
+  // String input from validated DTOs is always safe to pass through.
+  return new Prisma.Decimal(value);
+}
+
+/**
  * Builds a Prisma `where` clause that always scopes to the user.
  * Accepts a partial filter set, applies defaults, and merges in
  * user-scoping guarantees.
@@ -280,20 +297,20 @@ export async function createTrade(
         tradingAccountId: input.tradingAccountId,
         side: input.side,
         status,
-        entryPrice: input.entryPrice as unknown as Prisma.Decimal,
+        entryPrice: decimalFromString(input.entryPrice)!,
         entryDate: input.entryDate,
-        exitPrice: (input.exitPrice ?? null) as unknown as Prisma.Decimal | null,
+        exitPrice: decimalFromString(input.exitPrice),
         exitDate: input.exitDate ?? null,
-        stopLoss: (input.stopLoss ?? null) as unknown as Prisma.Decimal | null,
-        takeProfit: (input.takeProfit ?? null) as unknown as Prisma.Decimal | null,
-        riskAmount: (input.riskAmount ?? null) as unknown as Prisma.Decimal | null,
-        plannedRiskReward: (input.plannedRiskReward ?? null) as unknown as Prisma.Decimal | null,
-        quantity: input.quantity as unknown as Prisma.Decimal,
-        grossPnl: (input.grossPnl ?? null) as unknown as Prisma.Decimal | null,
-        commission: (input.commission ?? null) as unknown as Prisma.Decimal | null,
-        fees: (input.fees ?? null) as unknown as Prisma.Decimal | null,
-        swap: (input.swap ?? null) as unknown as Prisma.Decimal | null,
-        netPnl: (input.netPnl ?? null) as unknown as Prisma.Decimal | null,
+        stopLoss: decimalFromString(input.stopLoss),
+        takeProfit: decimalFromString(input.takeProfit),
+        riskAmount: decimalFromString(input.riskAmount),
+        plannedRiskReward: decimalFromString(input.plannedRiskReward),
+        quantity: decimalFromString(input.quantity)!,
+        grossPnl: decimalFromString(input.grossPnl),
+        commission: decimalFromString(input.commission),
+        fees: decimalFromString(input.fees),
+        swap: decimalFromString(input.swap),
+        netPnl: decimalFromString(input.netPnl),
         title: input.title ?? null,
         notes: input.notes ?? null,
         strategyId: input.strategyId ?? null,
@@ -447,45 +464,44 @@ export async function updateTrade(
 
   if (input.side !== undefined) data.side = input.side;
   if (input.entryPrice !== undefined) {
-    data.entryPrice = input.entryPrice as unknown as Prisma.Decimal;
+    data.entryPrice = decimalFromString(input.entryPrice)!;
   }
   if (input.entryDate !== undefined) data.entryDate = input.entryDate;
   if (input.exitPrice !== undefined) {
-    data.exitPrice = (input.exitPrice ?? null) as unknown as Prisma.Decimal | null;
+    data.exitPrice = decimalFromString(input.exitPrice);
   }
   if (input.exitDate !== undefined) {
     data.exitDate = input.exitDate ?? null;
   }
   if (input.stopLoss !== undefined) {
-    data.stopLoss = (input.stopLoss ?? null) as unknown as Prisma.Decimal | null;
+    data.stopLoss = decimalFromString(input.stopLoss);
   }
   if (input.takeProfit !== undefined) {
-    data.takeProfit = (input.takeProfit ?? null) as unknown as Prisma.Decimal | null;
+    data.takeProfit = decimalFromString(input.takeProfit);
   }
   if (input.riskAmount !== undefined) {
-    data.riskAmount = (input.riskAmount ?? null) as unknown as Prisma.Decimal | null;
+    data.riskAmount = decimalFromString(input.riskAmount);
   }
   if (input.plannedRiskReward !== undefined) {
-    data.plannedRiskReward =
-      (input.plannedRiskReward ?? null) as unknown as Prisma.Decimal | null;
+    data.plannedRiskReward = decimalFromString(input.plannedRiskReward);
   }
   if (input.quantity !== undefined) {
-    data.quantity = input.quantity as unknown as Prisma.Decimal;
+    data.quantity = decimalFromString(input.quantity)!;
   }
   if (input.commission !== undefined) {
-    data.commission = (input.commission ?? null) as unknown as Prisma.Decimal | null;
+    data.commission = decimalFromString(input.commission);
   }
   if (input.fees !== undefined) {
-    data.fees = (input.fees ?? null) as unknown as Prisma.Decimal | null;
+    data.fees = decimalFromString(input.fees);
   }
   if (input.swap !== undefined) {
-    data.swap = (input.swap ?? null) as unknown as Prisma.Decimal | null;
+    data.swap = decimalFromString(input.swap);
   }
   if (input.grossPnl !== undefined) {
-    data.grossPnl = (input.grossPnl ?? null) as unknown as Prisma.Decimal | null;
+    data.grossPnl = decimalFromString(input.grossPnl);
   }
   if (input.netPnl !== undefined) {
-    data.netPnl = (input.netPnl ?? null) as unknown as Prisma.Decimal | null;
+    data.netPnl = decimalFromString(input.netPnl);
   }
   if (input.status !== undefined) data.status = input.status;
   if (input.title !== undefined) data.title = input.title ?? null;

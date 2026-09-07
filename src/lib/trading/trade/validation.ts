@@ -231,6 +231,34 @@ function validatePlannedRiskReward(value: unknown): FieldError | null {
   return null;
 }
 
+/**
+ * Validates a signed monetary value (e.g. P&L, swap).
+ *
+ * Use this for fields where negative values are legitimate:
+ * - grossPnl / netPnl: winners are positive, losers are negative.
+ * - swap: overnight financing can be either direction.
+ *
+ * Validates:
+ * - null/undefined pass through (the field is optional)
+ * - the value is a string
+ * - the value is a well-formed decimal number (sign, digits, decimal point)
+ * - it does not exceed the schema's precision (2 decimal places)
+ *
+ * Does NOT reject negative values.
+ */
+function validateSignedMonetary(
+  value: unknown,
+  field: string,
+): FieldError | null {
+  if (value === undefined || value === null) return null; // nullable
+  const err = validateDecimalString(value, field, MAX_MONETARY_DECIMAL_PLACES);
+  if (err) return err;
+  // Format is already enforced by validateDecimalString (regex check).
+  // We deliberately do NOT check the sign — negative P&L and swap
+  // are valid in a trading journal.
+  return null;
+}
+
 function validateOptionalString(
   value: unknown,
   field: string,
@@ -387,13 +415,13 @@ export function validateCreateTradeInput(
   const feesErr = validateNonNegativeMonetary(data.fees, "fees");
   if (feesErr) errors.push(feesErr);
 
-  const swapErr = validateNonNegativeMonetary(data.swap, "swap");
+  const swapErr = validateSignedMonetary(data.swap, "swap");
   if (swapErr) errors.push(swapErr);
 
-  const grossPnlErr = validateNonNegativeMonetary(data.grossPnl, "grossPnl");
+  const grossPnlErr = validateSignedMonetary(data.grossPnl, "grossPnl");
   if (grossPnlErr) errors.push(grossPnlErr);
 
-  const netPnlErr = validateNonNegativeMonetary(data.netPnl, "netPnl");
+  const netPnlErr = validateSignedMonetary(data.netPnl, "netPnl");
   if (netPnlErr) errors.push(netPnlErr);
 
   // Optional strings
@@ -513,17 +541,17 @@ export function validateUpdateTradeInput(
   }
 
   if (data.swap !== undefined) {
-    const err = validateNonNegativeMonetary(data.swap, "swap");
+    const err = validateSignedMonetary(data.swap, "swap");
     if (err) errors.push(err);
   }
 
   if (data.grossPnl !== undefined) {
-    const err = validateNonNegativeMonetary(data.grossPnl, "grossPnl");
+    const err = validateSignedMonetary(data.grossPnl, "grossPnl");
     if (err) errors.push(err);
   }
 
   if (data.netPnl !== undefined) {
-    const err = validateNonNegativeMonetary(data.netPnl, "netPnl");
+    const err = validateSignedMonetary(data.netPnl, "netPnl");
     if (err) errors.push(err);
   }
 

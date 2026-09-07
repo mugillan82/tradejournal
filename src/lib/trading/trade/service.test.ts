@@ -497,4 +497,95 @@ describe("Trade service — security and behavior", () => {
       }
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Prisma Decimal handling
+  // -------------------------------------------------------------------------
+
+  describe("decimalFromString — Prisma Decimal construction", () => {
+    // We access the helper through the createTrade call — when a trade is
+    // created, the Prisma write goes through decimalFromString. We verify
+    // the correct Prisma.Decimal values are written by inspecting the mock calls.
+
+    it("constructs Prisma.Decimal from a positive decimal string", async () => {
+      const mockPrisma = mockPrismaHolder.current!;
+      let captured: { entryPrice: unknown; quantity: unknown; grossPnl: unknown; swap: unknown; netPnl: unknown } | null = null;
+      mockPrisma.trade.create.mockImplementation((args: { data: { entryPrice: unknown; quantity: unknown; grossPnl: unknown; swap: unknown; netPnl: unknown } }) => {
+        captured = args.data;
+        return Promise.resolve(makeTradeRecord());
+      });
+
+      await createTrade({
+        tradingAccountId: ACCOUNT_A,
+        side: "LONG",
+        entryPrice: "100.50",
+        entryDate: new Date(),
+        quantity: "11",
+        grossPnl: "250.00",
+        swap: "-0.10",
+        netPnl: "249.00",
+      });
+
+      // Verify the values are Prisma.Decimal instances (have toString) with correct numeric value
+      expect(captured).not.toBeNull();
+      const entryPrice = captured!.entryPrice as { toString(): string };
+      const quantity = captured!.quantity as { toString(): string };
+      // Prisma.Decimal normalizes trailing zeros, so use Number comparison
+      expect(Number(entryPrice.toString())).toBe(100.5);
+      expect(Number(quantity.toString())).toBe(11);
+      // GrossPnl positive
+      expect(Number((captured!.grossPnl as { toString(): string }).toString())).toBe(250);
+    });
+
+    it("constructs Prisma.Decimal from a negative decimal string (signed P&L)", async () => {
+      const mockPrisma = mockPrismaHolder.current!;
+      let captured: { grossPnl: unknown; netPnl: unknown; swap: unknown } | null = null;
+      mockPrisma.trade.create.mockImplementation((args: { data: { grossPnl: unknown; netPnl: unknown; swap: unknown } }) => {
+        captured = args.data;
+        return Promise.resolve(makeTradeRecord());
+      });
+
+      await createTrade({
+        tradingAccountId: ACCOUNT_A,
+        side: "SHORT",
+        entryPrice: "100.00",
+        entryDate: new Date(),
+        quantity: "10",
+        grossPnl: "-150.75",
+        netPnl: "-152.25",
+        swap: "-0.10",
+      });
+
+      expect(captured).not.toBeNull();
+      // Critical: signed P&L must be passed through as-is, not coerced
+      expect((captured!.grossPnl as { toString(): string }).toString()).toBe("-150.75");
+      expect((captured!.netPnl as { toString(): string }).toString()).toBe("-152.25");
+      expect((captured!.swap as { toString(): string }).toString()).toBe("-0.1");
+    });
+
+    it("handles null for nullable decimal fields", async () => {
+      const mockPrisma = mockPrismaHolder.current!;
+      let captured: { grossPnl: unknown; netPnl: unknown; swap: unknown } | null = null;
+      mockPrisma.trade.create.mockImplementation((args: { data: { grossPnl: unknown; netPnl: unknown; swap: unknown } }) => {
+        captured = args.data;
+        return Promise.resolve(makeTradeRecord());
+      });
+
+      await createTrade({
+        tradingAccountId: ACCOUNT_A,
+        side: "LONG",
+        entryPrice: "100.00",
+        entryDate: new Date(),
+        quantity: "5",
+        grossPnl: null,
+        netPnl: null,
+        swap: null,
+      });
+
+      expect(captured).not.toBeNull();
+      expect(captured!.grossPnl).toBeNull();
+      expect(captured!.netPnl).toBeNull();
+      expect(captured!.swap).toBeNull();
+    });
+  });
 });
