@@ -1,20 +1,34 @@
 /**
- * /sign-up page (placeholder)
+ * /sign-up page
  *
- * The proxy layer redirects unauthenticated users here from
- * protected routes. The real form is a future Step.
+ * Account creation page for TradeJournal.
+ * Wrapped in Suspense so the form can use useSearchParams.
  */
+
+import { Suspense } from "react";
+import { AuthLayout } from "@/components/auth/auth-layout";
+import { SignUpForm } from "@/components/auth/sign-up-form";
+
+function SignUpContent() {
+  return <SignUpForm />;
+}
+
 export default function SignUpPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-slate-950 text-slate-100">
-      <div className="max-w-md w-full space-y-4 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-emerald-400">
-          Sign Up
-        </h1>
-        <p className="text-sm text-slate-400">
-          Sign-up form will be implemented in a future step.
-        </p>
-      </div>
-    </main>
+    <AuthLayout>
+      <Suspense
+        fallback={
+          <div
+            aria-busy="true"
+            aria-label="Loading sign-up form"
+            className="flex items-center justify-center py-12"
+          >
+            <div className="h-6 w-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+          </div>
+        }
+      >
+        <SignUpContent />
+      </Suspense>
+    </AuthLayout>
   );
 }

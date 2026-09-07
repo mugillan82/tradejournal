@@ -1,20 +1,34 @@
 /**
- * /sign-in page (placeholder)
+ * /sign-in page
  *
- * The proxy layer redirects unauthenticated users here from
- * protected routes. The real form is a future Step.
+ * Authentication page for existing TradeJournal users.
+ * Wrapped in Suspense so the form can use useSearchParams.
  */
+
+import { Suspense } from "react";
+import { AuthLayout } from "@/components/auth/auth-layout";
+import { SignInForm } from "@/components/auth/sign-in-form";
+
+function SignInContent() {
+  return <SignInForm />;
+}
+
 export default function SignInPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-slate-950 text-slate-100">
-      <div className="max-w-md w-full space-y-4 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-emerald-400">
-          Sign In
-        </h1>
-        <p className="text-sm text-slate-400">
-          Sign-in form will be implemented in a future step.
-        </p>
-      </div>
-    </main>
+    <AuthLayout>
+      <Suspense
+        fallback={
+          <div
+            aria-busy="true"
+            aria-label="Loading sign-in form"
+            className="flex items-center justify-center py-12"
+          >
+            <div className="h-6 w-6 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+          </div>
+        }
+      >
+        <SignInContent />
+      </Suspense>
+    </AuthLayout>
   );
 }

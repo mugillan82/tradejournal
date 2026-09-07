@@ -1,26 +1,92 @@
 @import "tailwindcss";
 
+/* ── Brand design tokens ────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background */
+  --background: 222 47% 4%;      /* slate-950  — #0f172a */
+  --foreground: 215 25% 95%;    /* slate-100  — #f1f5f9 */
+
+  /* Primary (emerald) */
+  --primary:          160 84% 39%;   /* emerald-500  — #10b981 */
+  --primary-hover:    160 84% 45%;   /* emerald-400  — #34d399 */
+  --primary-active:   160 84% 32%;   /* emerald-600  — #059669 */
+  --primary-muted:   160 84% 39% / 0.12; /* bg tint */
+
+  /* Surface variants */
+  --surface:          217 33% 10%;  /* slate-900  — #0f172a */
+  --surface-hover:    217 33% 13%;  /* slate-800/90 */
+  --border:           215 20% 22%;  /* slate-700  — #334155 */
+  --border-subtle:    215 20% 17%;  /* slate-800 */
+
+  /* Text */
+  --muted:            215 16% 55%;  /* slate-400  — #94a3b8 */
+  --muted-foreground: 215 16% 70%;  /* slate-300 */
+
+  /* Semantic */
+  --destructive:      0 72% 51%;    /* red-600 */
+  --destructive-foreground: 0 72% 97%;
+  --warning:          38 92% 50%;   /* amber-500 */
+  --success:          160 84% 39%;  /* emerald-500 */
 }
 
+/* ── Tailwind @theme override ───────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: oklch(var(--background));
+  --color-foreground: oklch(var(--foreground));
+  --color-primary:          oklch(var(--primary));
+  --color-primary-hover:    oklch(var(--primary-hover));
+  --color-primary-active:   oklch(var(--primary-active));
+  --color-surface:          oklch(var(--surface));
+  --color-border:           oklch(var(--border));
+  --color-muted:            oklch(var(--muted));
+  --color-muted-foreground: oklch(var(--muted-foreground));
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base ────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: oklch(var(--background));
+  color: oklch(var(--foreground));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+}
+
+/* ── Focus visible ───────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid oklch(var(--primary));
+  outline-offset: 2px;
+}
+
+/* ── Custom scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: oklch(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--border));
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--muted));
+}
+
+/* ── Text selection ──────────────────────────────────────────── */
+::selection {
+  background: oklch(var(--primary) / 0.25);
+  color: oklch(var(--foreground));
 }
