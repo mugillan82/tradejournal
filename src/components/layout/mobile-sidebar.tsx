@@ -110,19 +110,23 @@ function useFocusTrap(
 }
 
 interface DrawerItemProps {
-  href: string;
-  label: string;
-  status: "ready" | "coming-soon";
+  item: {
+    href: string;
+    label: string;
+    icon: React.ComponentType<import("@/components/icons").IconProps>;
+    status: "ready" | "coming-soon";
+  };
   onNavigate: () => void;
 }
 
-function DrawerItem({ href, label, status, onNavigate }: DrawerItemProps) {
+function DrawerItem({ item, onNavigate }: DrawerItemProps) {
   const pathname = usePathname();
-  const isActive = pathname.toLowerCase() === href.toLowerCase();
+  const isActive = pathname.toLowerCase() === item.href.toLowerCase();
+  const Icon = item.icon;
 
   return (
     <Link
-      href={href}
+      href={item.href}
       onClick={onNavigate}
       className={[
         "flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-sm transition-colors duration-100",
@@ -133,16 +137,19 @@ function DrawerItem({ href, label, status, onNavigate }: DrawerItemProps) {
       aria-current={isActive ? "page" : undefined}
     >
       <span className="flex items-center gap-2.5">
-        <span
+        <Icon
+          size={16}
+          strokeWidth={1.75}
+          className={
+            isActive
+              ? "text-emerald-400 flex-shrink-0"
+              : "text-slate-500 flex-shrink-0"
+          }
           aria-hidden="true"
-          className={[
-            "h-1.5 w-1.5 rounded-full",
-            isActive ? "bg-emerald-500" : "bg-slate-700",
-          ].join(" ")}
         />
-        {label}
+        <span>{item.label}</span>
       </span>
-      {status === "coming-soon" && (
+      {item.status === "coming-soon" && (
         <span className="text-[10px] font-medium text-slate-600">Soon</span>
       )}
     </Link>
@@ -189,9 +196,7 @@ function DrawerContent({
             {section.items.map((item) => (
               <DrawerItem
                 key={item.href}
-                href={item.href}
-                label={item.label}
-                status={item.status}
+                item={item}
                 onNavigate={onClose}
               />
             ))}
