@@ -1,0 +1,338 @@
+// Trading Journal Database Schema
+// Production-grade schema for trading journal domain
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ====================
+// ENUMS
+// ====================
+enum AccountType {
+  SIMULATION
+  PAPER_TRADING
+  LIVE
+  DEMO
+}
+
+enum TradeSide {
+  LONG
+  SHORT
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum ExecutionSide {
+  ENTRY
+  EXIT
+}
+
+enum JournalMood {
+  VERY_BAD
+  BAD
+  NEUTRAL
+  GOOD
+  VERY_GOOD
+}
+
+// ====================
+// CORE MODELS
+// ====================
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts       Account[]
+  trades         Trade[]
+  journalEntries JournalEntry[]
+  reviews        Review[]
+
+  @@index([email])
+}
+
+model Account {
+  id             String      @id @default(uuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String // e.g., "Interactive Brokers - Main"
+  type           AccountType
+  currency       String      @default("USD")
+  initialBalance Decimal?    @db.Decimal(18, 2)
+  currentBalance Decimal?    @db.Decimal(18, 2)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  trades Trade[]
+
+  @@index([userId])
+  @@index([isActive, userId])
+  @@index([currency])
+}
+
+model Trade {
+  id        String  @id @default(uuid())
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Trade direction
+  side TradeSide
+
+  // Entry
+  entryPrice Decimal  @db.Decimal(18, 8)
+  entryDate  DateTime
+
+  // Exit (nullable for open trades)
+  exitPrice Decimal?  @db.Decimal(18, 8)
+  exitDate  DateTime?
+
+  // Risk management
+  stopLoss          Decimal? @db.Decimal(18, 8)
+  takeProfit        Decimal? @db.Decimal(18, 8)
+  riskAmount        Decimal? @db.Decimal(18, 2) // dollar amount risked
+  plannedRiskReward Decimal? @db.Decimal(10, 2) // planned risk:reward ratio
+  actualRMultiple   Decimal? @db.Decimal(10, 2) // realized R-multiple (calculated from P&L / riskAmount)
+
+  // Position sizing
+  quantity Decimal @db.Decimal(18, 8) // position size
+
+  // P&L (before costs)
+  grossPnl Decimal? @db.Decimal(18, 2)
+
+  // Costs
+  commission Decimal? @db.Decimal(18, 2) // broker commission
+  fees       Decimal? @db.Decimal(18, 2) // exchange/regulatory fees
+  swap       Decimal? @db.Decimal(18, 2) // overnight financing/rollover
+
+  // Net P&L (after costs)
+  netPnl Decimal? @db.Decimal(18, 2)
+
+  // Status
+  status TradeStatus @default(OPEN)
+
+  // Optional references
+  title      String?
+  notes      String?
+  strategyId String?
+  strategy   Strategy? @relation(fields: [strategyId], references: [id])
+  setupId    String?
+  setup      Setup?    @relation(fields: [setupId], references: [id])
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  executions  Execution[]    @relation("TradeExecutions")
+  tags        TradeTag[]     @relation("TradeTags")
+  mistakes    TradeMistake[] @relation("TradeMistakes")
+  tradeNotes  TradeNote[]    @relation("TradeNotes")
+  attachments Attachment[]   @relation("TradeAttachments")
+  reviewedIn  ReviewTrade[]  @relation("ReviewTrades")
+
+  // Indexes for query performance
+  @@index([userId, status])
+  @@index([accountId, entryDate])
+  @@index([entryDate])
+  @@index([side, status])
+  @@index([strategyId])
+  @@index([setupId])
+  @@index([userId, entryDate]) // for user's trade history
+  @@index([userId, exitDate]) // for closed trades analysis
+  @@index([userId, side, status]) // filtered trade lists
+  @@index([netPnl]) // P&L analytics
+}
+
+model Execution {
+  id      String @id @default(uuid())
+  tradeId String
+  trade   Trade  @relation("TradeExecutions", fields: [tradeId], references: [id], onDelete: Cascade)
+
+  side     ExecutionSide // ENTRY or EXIT
+  price    Decimal       @db.Decimal(18, 8)
+  quantity Decimal       @db.Decimal(18, 8)
+  datetime DateTime
+
+  commission Decimal? @db.Decimal(18, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([tradeId, datetime]) // for execution timeline
+  @@index([datetime])
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  color     String? // hex color for UI (e.g., "#FF5733")
+  createdAt DateTime @default(now())
+
+  trades TradeTag[] @relation("TradeTags")
+
+  @@index([name])
+}
+
+model TradeTag {
+  id      String @id @default(uuid())
+  tradeId String
+  trade   Trade  @relation("TradeTags", fields: [tradeId], references: [id], onDelete: Cascade)
+  tagId   String
+  tag     Tag    @relation("TradeTags", fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@unique([tradeId, tagId])
+  @@index([tagId])
+}
+
+model Strategy {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trades Trade[]
+
+  @@index([name])
+}
+
+model Setup {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  trades Trade[]
+
+  @@index([name])
+}
+
+model Mistake {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  trades TradeMistake[] @relation("TradeMistakes")
+
+  @@index([name])
+}
+
+model TradeMistake {
+  id        String  @id @default(uuid())
+  tradeId   String
+  trade     Trade   @relation("TradeMistakes", fields: [tradeId], references: [id], onDelete: Cascade)
+  mistakeId String
+  mistake   Mistake @relation("TradeMistakes", fields: [mistakeId], references: [id], onDelete: Restrict)
+
+  @@unique([tradeId, mistakeId])
+  @@index([mistakeId])
+}
+
+model Attachment {
+  id             String        @id @default(uuid())
+  tradeId        String?
+  trade          Trade?        @relation("TradeAttachments", fields: [tradeId], references: [id], onDelete: Cascade)
+  journalEntryId String?
+  journalEntry   JournalEntry? @relation("JournalAttachments", fields: [journalEntryId], references: [id], onDelete: Cascade)
+
+  fileName   String
+  fileUrl    String // storage URL/path (S3, local, etc.)
+  fileSize   Int? // in bytes
+  mimeType   String? // MIME type (image/png, image/jpeg, etc.)
+  uploadedAt DateTime @default(now())
+
+  // Application-level invariant: exactly one of (tradeId, journalEntryId) MUST be set.
+  // Cascade deletes ensure orphans cannot exist (parent deletion removes attachments).
+  // Cross-parent validation must be enforced in the application layer since Prisma 5
+  // does not support CHECK constraints.
+  @@index([tradeId])
+  @@index([journalEntryId])
+}
+
+model TradeNote {
+  id        String   @id @default(uuid())
+  tradeId   String
+  trade     Trade    @relation("TradeNotes", fields: [tradeId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([tradeId])
+}
+
+model JournalEntry {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  entryDate DateTime     @unique // one journal entry per calendar day (UTC)
+  mood      JournalMood?
+  energy    Int? // 1-10 scale
+  focus     Int? // 1-10 scale
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attachments Attachment[] @relation("JournalAttachments")
+
+  @@index([userId])
+  @@index([entryDate])
+}
+
+model Review {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title      String?
+  reviewDate DateTime
+  notes      String?
+  rating     Int? // 1-5 overall rating
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trades ReviewTrade[] @relation("ReviewTrades")
+
+  @@index([userId])
+  @@index([reviewDate])
+  @@index([userId, reviewDate])
+}
+
+model ReviewTrade {
+  id       String @id @default(uuid())
+  reviewId String
+  review   Review @relation("ReviewTrades", fields: [reviewId], references: [id], onDelete: Cascade)
+  tradeId  String
+  trade    Trade  @relation("ReviewTrades", fields: [tradeId], references: [id], onDelete: Restrict)
+
+  notes  String? // review notes for this specific trade
+  rating Int? // 1-5 rating for this trade in review
+
+  @@unique([reviewId, tradeId])
+  @@index([tradeId])
+}
+
+// ====================
+// HELPER VIEWS / INDEXES FOR ANALYTICS
+// ====================
+// Note: These would typically be materialized views or computed in application layer
+// But we add supporting indexes for common analytics queries
+
+// For performance analytics: trades by user, date range, P&L
+// For risk analytics: R-multiple distribution, win/loss rates
+// For strategy analytics: performance by strategy/setup

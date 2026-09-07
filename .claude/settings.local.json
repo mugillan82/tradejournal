@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsc *)",
+      "Bash(psql --version)",
+      "Bash(powershell -Command \"Get-Service -Name '*postgres*' 2>&1\")",
+      "Bash(C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe *)",
+      "Bash(PGPASSWORD=postgres C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe *)",
+      "Bash(PGPASSWORD=postgres C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe *)",
+      "Bash(npm run *)",
+      "Bash(npx tsx *)"
+    ]
+  }
+}
