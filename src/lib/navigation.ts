@@ -115,14 +115,15 @@ export const navigation: NavSection[] = [
         label: "Strategies",
         href: "/strategies",
         icon: Target,
-        status: "coming-soon",
+        status: "ready",
       },
       {
         label: "Tags",
         href: "/tags",
         icon: Tags,
-        status: "coming-soon",
+        status: "ready",
       },
+
     ],
   },
   {

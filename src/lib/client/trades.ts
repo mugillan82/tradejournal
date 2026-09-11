@@ -1220,5 +1220,845 @@ export async function deleteReviewClient(id: string, signal?: AbortSignal): Prom
   }
 }
 
+// ===========================================================================
+// CLASSIFICATION CLIENT DATA LAYER (Tags, Strategies, Setups, Mistakes)
+// ===========================================================================
+
+export interface TagClientDto {
+  readonly id: string;
+  readonly name: string;
+  readonly color: string | null;
+  readonly createdAt: Date;
+  readonly tradeCount?: number;
+}
+
+export interface StrategyClientDto {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly tradeCount?: number;
+}
+
+export interface SetupClientDto {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly createdAt: Date;
+  readonly tradeCount?: number;
+}
+
+export interface MistakeClientDto {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly createdAt: Date;
+  readonly tradeCount?: number;
+}
+
+export interface TradeClassificationSummaryClientDto {
+  readonly tradeId: string;
+  readonly strategy: StrategyClientDto | null;
+  readonly setup: SetupClientDto | null;
+  readonly tags: ReadonlyArray<TagClientDto>;
+  readonly mistakes: ReadonlyArray<MistakeClientDto>;
+}
+
+// ---------------------------------------------------------------------------
+// Tag Client Functions
+// ---------------------------------------------------------------------------
+
+export async function fetchTagsClient(signal?: AbortSignal): Promise<ReadonlyArray<TagClientDto>> {
+  try {
+    const res = await fetch("/api/tags", {
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to fetch tags (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+      );
+    }
+
+    const data = (await res.json()) as Array<{
+      id: string;
+      name: string;
+      color: string | null;
+      createdAt: string;
+      tradeCount?: number;
+    }>;
+    return data.map((t) => ({ ...t, createdAt: new Date(t.createdAt) }));
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while fetching tags", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function createTagClient(
+  input: { name: string; color?: string | null },
+  signal?: AbortSignal,
+): Promise<TagClientDto> {
+  try {
+    const res = await fetch("/api/tags", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to create tag (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 409 ? "CONFLICT" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const t = await res.json();
+    return { ...t, createdAt: new Date(t.createdAt) };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while creating tag", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function updateTagClient(
+  id: string,
+  input: { name?: string; color?: string | null },
+  signal?: AbortSignal,
+): Promise<TagClientDto> {
+  try {
+    const res = await fetch(`/api/tags/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to update tag (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : res.status === 409 ? "CONFLICT" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const t = await res.json();
+    return { ...t, createdAt: new Date(t.createdAt) };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating tag", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function deleteTagClient(id: string, signal?: AbortSignal): Promise<void> {
+  try {
+    const res = await fetch(`/api/tags/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to delete tag (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while deleting tag", 500, "NETWORK_ERROR");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Strategy Client Functions
+// ---------------------------------------------------------------------------
+
+export async function fetchStrategiesClient(signal?: AbortSignal): Promise<ReadonlyArray<StrategyClientDto>> {
+  try {
+    const res = await fetch("/api/strategies", {
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to fetch strategies (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+      );
+    }
+
+    const data = (await res.json()) as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      createdAt: string;
+      updatedAt: string;
+      tradeCount?: number;
+    }>;
+    return data.map((s) => ({
+      ...s,
+      createdAt: new Date(s.createdAt),
+      updatedAt: new Date(s.updatedAt),
+    }));
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while fetching strategies", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function createStrategyClient(
+  input: { name: string; description?: string | null },
+  signal?: AbortSignal,
+): Promise<StrategyClientDto> {
+  try {
+    const res = await fetch("/api/strategies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to create strategy (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 409 ? "CONFLICT" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const s = await res.json();
+    return {
+      ...s,
+      createdAt: new Date(s.createdAt),
+      updatedAt: new Date(s.updatedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while creating strategy", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function updateStrategyClient(
+  id: string,
+  input: { name?: string; description?: string | null },
+  signal?: AbortSignal,
+): Promise<StrategyClientDto> {
+  try {
+    const res = await fetch(`/api/strategies/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to update strategy (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : res.status === 409 ? "CONFLICT" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const s = await res.json();
+    return {
+      ...s,
+      createdAt: new Date(s.createdAt),
+      updatedAt: new Date(s.updatedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating strategy", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function deleteStrategyClient(id: string, signal?: AbortSignal): Promise<void> {
+  try {
+    const res = await fetch(`/api/strategies/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to delete strategy (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while deleting strategy", 500, "NETWORK_ERROR");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Setup Client Functions
+// ---------------------------------------------------------------------------
+
+export async function fetchSetupsClient(signal?: AbortSignal): Promise<ReadonlyArray<SetupClientDto>> {
+  try {
+    const res = await fetch("/api/setups", {
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to fetch setups (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+      );
+    }
+
+    const data = (await res.json()) as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      createdAt: string;
+      tradeCount?: number;
+    }>;
+    return data.map((s) => ({ ...s, createdAt: new Date(s.createdAt) }));
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while fetching setups", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function createSetupClient(
+  input: { name: string; description?: string | null },
+  signal?: AbortSignal,
+): Promise<SetupClientDto> {
+  try {
+    const res = await fetch("/api/setups", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to create setup (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 409 ? "CONFLICT" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const s = await res.json();
+    return { ...s, createdAt: new Date(s.createdAt) };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while creating setup", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function updateSetupClient(
+  id: string,
+  input: { name?: string; description?: string | null },
+  signal?: AbortSignal,
+): Promise<SetupClientDto> {
+  try {
+    const res = await fetch(`/api/setups/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to update setup (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : res.status === 409 ? "CONFLICT" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const s = await res.json();
+    return { ...s, createdAt: new Date(s.createdAt) };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating setup", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function deleteSetupClient(id: string, signal?: AbortSignal): Promise<void> {
+  try {
+    const res = await fetch(`/api/setups/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to delete setup (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while deleting setup", 500, "NETWORK_ERROR");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mistake Client Functions
+// ---------------------------------------------------------------------------
+
+export async function fetchMistakesClient(signal?: AbortSignal): Promise<ReadonlyArray<MistakeClientDto>> {
+  try {
+    const res = await fetch("/api/mistakes", {
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to fetch mistakes (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+      );
+    }
+
+    const data = (await res.json()) as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      createdAt: string;
+      tradeCount?: number;
+    }>;
+    return data.map((m) => ({ ...m, createdAt: new Date(m.createdAt) }));
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while fetching mistakes", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function createMistakeClient(
+  input: { name: string; description?: string | null },
+  signal?: AbortSignal,
+): Promise<MistakeClientDto> {
+  try {
+    const res = await fetch("/api/mistakes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to create mistake (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 409 ? "CONFLICT" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const m = await res.json();
+    return { ...m, createdAt: new Date(m.createdAt) };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while creating mistake", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function updateMistakeClient(
+  id: string,
+  input: { name?: string; description?: string | null },
+  signal?: AbortSignal,
+): Promise<MistakeClientDto> {
+  try {
+    const res = await fetch(`/api/mistakes/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to update mistake (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : res.status === 409 ? "CONFLICT" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const m = await res.json();
+    return { ...m, createdAt: new Date(m.createdAt) };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating mistake", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function deleteMistakeClient(id: string, signal?: AbortSignal): Promise<void> {
+  try {
+    const res = await fetch(`/api/mistakes/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to delete mistake (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while deleting mistake", 500, "NETWORK_ERROR");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Trade Association Client Functions
+// ---------------------------------------------------------------------------
+
+export async function fetchTradeClassificationsClient(
+  tradeId: string,
+  signal?: AbortSignal,
+): Promise<TradeClassificationSummaryClientDto> {
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/classifications`, {
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to fetch classifications for trade (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+
+    const data = await res.json();
+    return {
+      tradeId: data.tradeId,
+      strategy: data.strategy
+        ? {
+            ...data.strategy,
+            createdAt: new Date(data.strategy.createdAt),
+            updatedAt: new Date(data.strategy.updatedAt),
+          }
+        : null,
+      setup: data.setup
+        ? {
+            ...data.setup,
+            createdAt: new Date(data.setup.createdAt),
+          }
+        : null,
+      tags: data.tags.map((t: { id: string; name: string; color: string | null; createdAt: string }) => ({
+        ...t,
+        createdAt: new Date(t.createdAt),
+      })),
+      mistakes: data.mistakes.map((m: { id: string; name: string; description: string | null; createdAt: string }) => ({
+        ...m,
+        createdAt: new Date(m.createdAt),
+      })),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while fetching trade classifications", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function setTradeTagsClient(
+  tradeId: string,
+  tagIds: ReadonlyArray<string>,
+  signal?: AbortSignal,
+): Promise<ReadonlyArray<TagClientDto>> {
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/tags`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ tagIds }),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to set trade tags (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const data = (await res.json()) as Array<{ id: string; name: string; color: string | null; createdAt: string }>;
+    return data.map((t) => ({ ...t, createdAt: new Date(t.createdAt) }));
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating trade tags", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function setTradeMistakesClient(
+  tradeId: string,
+  mistakeIds: ReadonlyArray<string>,
+  signal?: AbortSignal,
+): Promise<ReadonlyArray<MistakeClientDto>> {
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/mistakes`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ mistakeIds }),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to set trade mistakes (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const data = (await res.json()) as Array<{ id: string; name: string; description: string | null; createdAt: string }>;
+    return data.map((m) => ({ ...m, createdAt: new Date(m.createdAt) }));
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating trade mistakes", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function assignTradeStrategyClient(
+  tradeId: string,
+  strategyId: string | null,
+  signal?: AbortSignal,
+): Promise<StrategyClientDto | null> {
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/strategy`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ strategyId }),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to assign strategy (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const data = await res.json();
+    if (!data.strategy) return null;
+    return {
+      ...data.strategy,
+      createdAt: new Date(data.strategy.createdAt),
+      updatedAt: new Date(data.strategy.updatedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while assigning strategy", 500, "NETWORK_ERROR");
+  }
+}
+
+export async function assignTradeSetupClient(
+  tradeId: string,
+  setupId: string | null,
+  signal?: AbortSignal,
+): Promise<SetupClientDto | null> {
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/setup`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ setupId }),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to assign setup (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const data = await res.json();
+    if (!data.setup) return null;
+    return {
+      ...data.setup,
+      createdAt: new Date(data.setup.createdAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while assigning setup", 500, "NETWORK_ERROR");
+  }
+}
+
+
 
 

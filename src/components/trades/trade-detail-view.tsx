@@ -20,7 +20,6 @@ import {
   ChevronLeft,
   AlertCircle,
   RefreshCw,
-  LineChart,
   Target,
   DollarSign,
   Clock,
@@ -29,6 +28,7 @@ import {
   Copy,
   Check,
 } from "@/components/icons";
+
 import {
   fetchTradeById,
   fetchTradingAccounts,
@@ -40,6 +40,7 @@ import { EditTradeModal } from "./edit-trade-modal";
 import { DeleteTradeDialog } from "./delete-trade-dialog";
 import { TradeAttachmentsSection } from "./trade-attachments-section";
 import { TradeNotesSection } from "./trade-notes-section";
+import { TradeClassificationSection } from "./trade-classification-section";
 
 interface TradeDetailViewProps {
   tradeId: string;
@@ -571,52 +572,15 @@ export function TradeDetailView({ tradeId }: TradeDetailViewProps) {
               </div>
             </div>
 
-            {/* PANEL 3: STRATEGY & JOURNAL NOTES */}
-            <div className="md:col-span-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <LineChart size={16} className="text-emerald-400" />
-                  <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider">
-                    Strategy &amp; Journal Reflections
-                  </h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  {trade.strategyId && (
-                    <span className="bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded text-[11px] font-mono">
-                      Strategy: {trade.strategyId}
-                    </span>
-                  )}
-                  {trade.setupId && (
-                    <span className="bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded text-[11px] font-mono">
-                      Setup: {trade.setupId}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs font-semibold text-slate-400 block mb-2">
-                  Trade Notes &amp; Review
-                </span>
-                {trade.notes ? (
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
-                    {trade.notes}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500 italic">
-                    No notes recorded for this trade execution. Click &quot;Edit Trade&quot; above to log your execution thoughts.
-                  </p>
-                )}
-              </div>
-
-              {/* Tags & Mistakes advisory */}
-              <div className="rounded-lg border border-slate-800/80 bg-slate-950/40 p-3 text-xs text-slate-400 flex items-start gap-2">
-                <span className="text-slate-500 mt-0.5" aria-hidden="true">•</span>
-                <p>
-                  Tags and Mistakes taggings will be managed through dedicated tag assignment tools in upcoming updates.
-                </p>
-              </div>
+            {/* PANEL 3: STRATEGY, SETUPS, TAGS & MISTAKES CLASSIFICATION */}
+            <div className="md:col-span-2">
+              <TradeClassificationSection
+                tradeId={trade.id}
+                onClassificationUpdated={loadData}
+              />
             </div>
+
+
 
             {/* PANEL 4: METADATA & AUDIT */}
             <div className="md:col-span-2 rounded-xl border border-slate-800/60 bg-slate-950/40 p-4 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-3">

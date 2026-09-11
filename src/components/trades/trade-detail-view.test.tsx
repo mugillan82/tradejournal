@@ -75,12 +75,25 @@ const mockAccounts = [
   },
 ];
 
+vi.mock("./trade-classification-section", () => ({
+  TradeClassificationSection: () => <div data-testid="trade-classification-section">Framework &amp; Classifications</div>,
+}));
+
+vi.mock("./trade-notes-section", () => ({
+  TradeNotesSection: () => <div data-testid="trade-notes-section">Trade Notes Section</div>,
+}));
+
+vi.mock("./trade-attachments-section", () => ({
+  TradeAttachmentsSection: () => <div data-testid="trade-attachments-section">Trade Attachments Section</div>,
+}));
+
 describe("TradeDetailView Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(clientTrades, "fetchTradeById").mockResolvedValue(mockTrade);
     vi.spyOn(clientTrades, "fetchTradingAccounts").mockResolvedValue(mockAccounts);
   });
+
 
   it("renders complete trade details after loading", async () => {
     render(<TradeDetailView tradeId="trade_detail_123" />);
@@ -92,10 +105,9 @@ describe("TradeDetailView Component", () => {
     expect(screen.getByText("$150.00")).toBeDefined();
     expect(screen.getByText("$165.00")).toBeDefined();
     expect(screen.getByText("100")).toBeDefined();
-    expect(screen.getByText("Clean breakout on heavy volume.")).toBeDefined();
-    expect(screen.getByText("Strategy: strat_momentum")).toBeDefined();
-    expect(screen.getByText("Setup: setup_pullback")).toBeDefined();
+    expect(screen.getByText(/Framework & Classifications/i)).toBeDefined();
   });
+
 
   it("renders not-found state when API returns 404", async () => {
     vi.spyOn(clientTrades, "fetchTradeById").mockRejectedValue(

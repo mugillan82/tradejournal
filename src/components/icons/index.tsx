@@ -15,7 +15,7 @@
 import { type SVGProps, forwardRef } from "react";
 
 /** Valid size values matching Tailwind sizing scale. */
-export type IconSize = 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32 | 36 | 40;
+export type IconSize = number;
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, "xmlns"> {
   /** Pixel size (width & height). Default 16. */
@@ -23,6 +23,7 @@ interface IconProps extends Omit<SVGProps<SVGSVGElement>, "xmlns"> {
   /** Stroke width. Default 1.75. */
   strokeWidth?: number;
 }
+
 
 /**
  * Base icon shell. All TradeJournal icons forward through this component.
@@ -496,7 +497,63 @@ export function MessageSquare({ size, strokeWidth, ...props }: IconProps) {
   );
 }
 
+export function Plus({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </Icon>
+  );
+}
+
+export function Tag({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+      <path d="M7 7h.01" />
+    </Icon>
+  );
+}
+
+export function AlertTriangle({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <line x1="12" x2="12" y1="9" y2="13" />
+      <line x1="12" x2="12.01" y1="17" y2="17" />
+    </Icon>
+  );
+}
+
+export function RotateCcw({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </Icon>
+  );
+}
+
+export function Loader2({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </Icon>
+  );
+}
+
+export function FolderPlus({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
+      <line x1="12" x2="12" y1="10" y2="16" />
+      <line x1="9" x2="15" y1="13" y2="13" />
+    </Icon>
+  );
+}
+
 /** Re-export IconProps for consumers (e.g. navigation.ts). */
 export type { IconProps };
+
 
 

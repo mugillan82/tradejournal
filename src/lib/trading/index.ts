@@ -103,5 +103,60 @@ export {
   listReviewsForTrade,
 } from "./journal";
 
+export type {
+  TagDto,
+  CreateTagInput,
+  UpdateTagInput,
+  StrategyDto,
+  CreateStrategyInput,
+  UpdateStrategyInput,
+  SetupDto,
+  CreateSetupInput,
+  UpdateSetupInput,
+  MistakeDto,
+  CreateMistakeInput,
+  UpdateMistakeInput,
+  TradeClassificationSummaryDto,
+  AssignTradeTagsInput,
+  AssignTradeMistakesInput,
+  AssignTradeStrategyInput,
+  AssignTradeSetupInput,
+  ClassificationServiceErrorCode,
+} from "./classification";
+
+export {
+  ClassificationServiceError,
+  createTag,
+  getTagById,
+  listTags,
+  updateTag,
+  deleteTag,
+  createStrategy,
+  getStrategyById,
+  listStrategies,
+  updateStrategy,
+  deleteStrategy,
+  createSetup,
+  getSetupById,
+  listSetups,
+  updateSetup,
+  deleteSetup,
+  createMistake,
+  getMistakeById,
+  listMistakes,
+  updateMistake,
+  deleteMistake,
+  getTradeClassifications,
+  setTradeTags,
+  addTradeTag,
+  removeTradeTag,
+  setTradeMistakes,
+  addTradeMistake,
+  removeTradeMistake,
+  assignTradeStrategy,
+  assignTradeSetup,
+} from "./classification";
+
+
 
 
