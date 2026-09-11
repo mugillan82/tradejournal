@@ -12,6 +12,8 @@ import {
   fetchTradeById,
   fetchTradingAccounts,
   createTradeClient,
+  updateTradeClient,
+  deleteTradeClient,
   TradeClientApiError,
 } from "./trades";
 
@@ -447,6 +449,164 @@ describe("createTradeClient", () => {
         quantity: "10",
       }),
     ).rejects.toThrow("Failed to fetch");
+  });
+});
+
+describe("updateTradeClient", () => {
+  const globalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    globalThis.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = globalFetch;
+  });
+
+  it("sends PATCH request with serialized dates and returns updated trade", async () => {
+    const mockUpdated = {
+      id: "trade_1",
+      userId: "user_1",
+      tradingAccountId: "acc_1",
+      side: "LONG",
+      status: "CLOSED",
+      entryPrice: "150.00",
+      entryDate: "2026-03-01T14:30:00.000Z",
+      exitPrice: "165.00",
+      exitDate: "2026-03-02T16:00:00.000Z",
+      quantity: "10",
+      grossPnl: "150.00",
+      netPnl: "148.00",
+      createdAt: "2026-03-01T14:30:00.000Z",
+      updatedAt: "2026-03-02T16:00:00.000Z",
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockUpdated,
+    });
+
+    const exitDate = new Date("2026-03-02T16:00:00.000Z");
+    const result = await updateTradeClient("trade_1", {
+      status: "CLOSED",
+      exitPrice: "165.00",
+      exitDate,
+      grossPnl: "150.00",
+      netPnl: "148.00",
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "/api/trades/trade_1",
+      expect.objectContaining({
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          status: "CLOSED",
+          exitPrice: "165.00",
+          exitDate: exitDate.toISOString(),
+          grossPnl: "150.00",
+          netPnl: "148.00",
+        }),
+      }),
+    );
+
+    expect(result.id).toBe("trade_1");
+    expect(result.status).toBe("CLOSED");
+    expect(result.exitDate).toBeInstanceOf(Date);
+    expect(result.exitDate?.toISOString()).toBe("2026-03-02T16:00:00.000Z");
+  });
+
+  it("throws TradeClientApiError with field errors on 400 validation failure", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        error: {
+          code: "VALIDATION",
+          message: "exitPrice is required for closed trade",
+          fieldErrors: [{ path: "exitPrice", message: "exitPrice is required for closed trade" }],
+        },
+      }),
+    });
+
+    try {
+      await updateTradeClient("trade_1", { status: "CLOSED" });
+      expect.fail("Should have thrown");
+    } catch (err: unknown) {
+      expect(err).toBeInstanceOf(TradeClientApiError);
+      const apiErr = err as TradeClientApiError;
+      expect(apiErr.status).toBe(400);
+      expect(apiErr.code).toBe("VALIDATION");
+      expect(apiErr.fieldErrors).toEqual([
+        { path: "exitPrice", message: "exitPrice is required for closed trade" },
+      ]);
+    }
+  });
+
+  it("throws TradeClientApiError on 404 not found", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({
+        error: {
+          code: "NOT_FOUND",
+          message: "Trade not found",
+        },
+      }),
+    });
+
+    await expect(
+      updateTradeClient("nonexistent", { title: "New Title" }),
+    ).rejects.toThrow("Trade not found");
+  });
+});
+
+describe("deleteTradeClient", () => {
+  const globalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    globalThis.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = globalFetch;
+  });
+
+  it("sends DELETE request to /api/trades/[id]", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+    });
+
+    await deleteTradeClient("trade_to_delete");
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "/api/trades/trade_to_delete",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+        },
+      }),
+    );
+  });
+
+  it("throws TradeClientApiError when trade to delete is not found", async () => {
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({
+        error: {
+          code: "NOT_FOUND",
+          message: "Trade not found",
+        },
+      }),
+    });
+
+    await expect(deleteTradeClient("nonexistent")).rejects.toThrow("Trade not found");
   });
 });
 
