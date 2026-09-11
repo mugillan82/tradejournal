@@ -74,7 +74,7 @@ export const navigation: NavSection[] = [
         label: "Trades",
         href: "/trades",
         icon: LineChart,
-        status: "coming-soon",
+        status: "ready",
       },
       {
         label: "Add Trade",
