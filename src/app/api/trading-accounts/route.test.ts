@@ -206,6 +206,36 @@ describe("POST /api/trading-accounts", () => {
     });
   });
 
+  it("returns 400 when request body contains unknown fields or userId injection", async () => {
+    mockCreateTradingAccount.mockRejectedValue(
+      createValidationError([
+        { path: "userId", message: "Unknown field: userId" },
+        { path: "unknownProp", message: "Unknown field: unknownProp" },
+      ]),
+    );
+
+    const request = new NextRequest("http://localhost:3000/api/trading-accounts", {
+      method: "POST",
+      body: JSON.stringify({ ...validCreateInput, userId: "hacked-user-id", unknownProp: "val" }),
+      headers: { "content-type": "application/json" },
+    });
+
+    const route = await import("./route");
+    const response = await route.POST(request);
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({
+      error: {
+        code: "VALIDATION",
+        fieldErrors: expect.arrayContaining([
+          expect.objectContaining({ path: "userId", message: "Unknown field: userId" }),
+          expect.objectContaining({ path: "unknownProp", message: "Unknown field: unknownProp" }),
+        ]),
+      },
+    });
+  });
+
   it("returns 500 when database error occurs without leaking details", async () => {
     mockCreateTradingAccount.mockRejectedValue(
       createDatabaseError(new Error("Internal Prisma error")),
@@ -364,6 +394,36 @@ describe("PATCH /api/trading-accounts/[id]", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toEqual(updatedAccount);
     expect(mockUpdateTradingAccount).toHaveBeenCalledWith(ACCOUNT_A, validUpdateInput);
+  });
+
+  it("returns 400 when PATCH body contains unknown fields or userId injection", async () => {
+    mockUpdateTradingAccount.mockRejectedValue(
+      createValidationError([
+        { path: "userId", message: "Unknown field: userId" },
+        { path: "unknownProp", message: "Unknown field: unknownProp" },
+      ]),
+    );
+
+    const request = new NextRequest(`http://localhost:3000/api/trading-accounts/${ACCOUNT_A}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ...validUpdateInput, userId: "hacked-user-id", unknownProp: "val" }),
+      headers: { "content-type": "application/json" },
+    });
+
+    const route = await import("./[id]/route");
+    const response = await route.PATCH(request, { params: { id: ACCOUNT_A } });
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({
+      error: {
+        code: "VALIDATION",
+        fieldErrors: expect.arrayContaining([
+          expect.objectContaining({ path: "userId", message: "Unknown field: userId" }),
+          expect.objectContaining({ path: "unknownProp", message: "Unknown field: unknownProp" }),
+        ]),
+      },
+    });
   });
 
   it("returns 400 when request body is malformed JSON", async () => {

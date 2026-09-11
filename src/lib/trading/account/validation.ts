@@ -115,6 +115,28 @@ function toResult(errors: FieldError[]): ValidationResult {
   return { errors: Object.freeze(errors), isValid: errors.length === 0 };
 }
 
+const ALLOWED_FIELDS = new Set([
+  "name",
+  "type",
+  "currency",
+  "initialBalance",
+  "currentBalance",
+  "isActive",
+]);
+
+function validateUnknownFields(data: Record<string, unknown>): FieldError[] {
+  const errors: FieldError[] = [];
+  for (const key of Object.keys(data)) {
+    if (!ALLOWED_FIELDS.has(key)) {
+      errors.push({
+        path: key,
+        message: `Unknown field: ${key}`,
+      });
+    }
+  }
+  return errors;
+}
+
 export function validateCreateTradingAccountInput(
   input: unknown,
 ): ValidationResult {
@@ -125,6 +147,9 @@ export function validateCreateTradingAccountInput(
   }
 
   const data = input as Record<string, unknown>;
+
+  // Reject any fields not in the allowed schema (e.g. unknown fields, userId injection)
+  errors.push(...validateUnknownFields(data));
 
   const nameErr = validateName(data.name);
   if (nameErr) errors.push(nameErr);
@@ -162,6 +187,9 @@ export function validateUpdateTradingAccountInput(
     return toResult([{ path: "", message: "At least one field must be provided for update" }]);
   }
 
+  // Reject any fields not in the allowed schema
+  errors.push(...validateUnknownFields(data));
+
   if (data.name !== undefined) {
     const err = validateName(data.name);
     if (err) errors.push(err);
@@ -194,3 +222,4 @@ export function validateUpdateTradingAccountInput(
 
   return toResult(errors);
 }
+
