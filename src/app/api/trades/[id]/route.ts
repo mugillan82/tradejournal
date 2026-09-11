@@ -22,8 +22,6 @@ import {
 } from "@/lib/trading/trade/service";
 import { requireServerUserId } from "@/lib/auth/session";
 
-const ALLOWED_METHODS = "GET, PATCH, DELETE, OPTIONS";
-
 async function authenticateRequest(): Promise<NextResponse<unknown> | null> {
   try {
     await requireServerUserId();
@@ -122,36 +120,4 @@ export async function DELETE(
   }
 }
 
-// ---------------------------------------------------------------------------
-// OPTIONS / Unsupported HTTP Methods — 405 Method Not Allowed
-// ---------------------------------------------------------------------------
-
-export async function OPTIONS(): Promise<NextResponse> {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      Allow: ALLOWED_METHODS,
-      "Cache-Control": "no-store",
-    },
-  });
-}
-
-export function methodNotAllowed(): NextResponse {
-  return NextResponse.json(
-    {
-      error: {
-        code: "METHOD_NOT_ALLOWED",
-        message: "Method Not Allowed",
-        fieldErrors: [],
-      },
-    },
-    {
-      status: 405,
-      headers: {
-        Allow: ALLOWED_METHODS,
-        "Cache-Control": "no-store",
-      },
-    },
-  );
-}
 

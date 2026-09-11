@@ -3,8 +3,8 @@
  *
  * Tests Next.js App Router trade API endpoints.
  * Route handlers:
- *   - src/app/api/trades/route.ts (POST, GET, OPTIONS)
- *   - src/app/api/trades/[id]/route.ts (GET, PATCH, DELETE, OPTIONS)
+ *   - src/app/api/trades/route.ts (POST, GET)
+ *   - src/app/api/trades/[id]/route.ts (GET, PATCH, DELETE)
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -71,6 +71,32 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
+// HTTP Method Exports (App Router Method Enforcement)
+// ---------------------------------------------------------------------------
+
+describe("HTTP Method Exports Verification", () => {
+  it("verifies /api/trades exports ONLY GET and POST handlers", async () => {
+    const route = await import("./route");
+    expect(route.GET).toBeDefined();
+    expect(route.POST).toBeDefined();
+    expect((route as Record<string, unknown>).PUT).toBeUndefined();
+    expect((route as Record<string, unknown>).DELETE).toBeUndefined();
+    expect((route as Record<string, unknown>).PATCH).toBeUndefined();
+    expect((route as Record<string, unknown>).OPTIONS).toBeUndefined();
+  });
+
+  it("verifies /api/trades/[id] exports ONLY GET, PATCH, and DELETE handlers", async () => {
+    const route = await import("./[id]/route");
+    expect(route.GET).toBeDefined();
+    expect(route.PATCH).toBeDefined();
+    expect(route.DELETE).toBeDefined();
+    expect((route as Record<string, unknown>).POST).toBeUndefined();
+    expect((route as Record<string, unknown>).PUT).toBeUndefined();
+    expect((route as Record<string, unknown>).OPTIONS).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/trades
 // ---------------------------------------------------------------------------
 
@@ -106,6 +132,7 @@ describe("POST /api/trades", () => {
     const response = await route.POST(request);
 
     expect(response.status).toBe(401);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toMatchObject({
       error: { code: "AUTH_REQUIRED", message: "Authentication required" },
     });
@@ -122,6 +149,7 @@ describe("POST /api/trades", () => {
     const response = await route.POST(request);
 
     expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toMatchObject({
       error: { code: "INVALID_BODY", message: "Request body must be valid JSON" },
     });
@@ -142,6 +170,7 @@ describe("POST /api/trades", () => {
     const response = await route.POST(request);
 
     expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toMatchObject({
       error: {
         code: "VALIDATION",
@@ -163,6 +192,7 @@ describe("POST /api/trades", () => {
     const response = await route.POST(request);
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toMatchObject({
       error: { code: "NOT_FOUND", message: "TradingAccount not found" },
     });
@@ -181,6 +211,7 @@ describe("POST /api/trades", () => {
     const response = await route.POST(request);
 
     expect(response.status).toBe(500);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     const body = await response.json();
     expect(body.error.code).toBe("DATABASE_ERROR");
     expect(body.error.message).not.toContain("Prisma");
@@ -241,6 +272,7 @@ describe("GET /api/trades", () => {
     const response = await route.GET(request);
 
     expect(response.status).toBe(401);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 
@@ -277,6 +309,7 @@ describe("GET /api/trades/[id]", () => {
     const response = await route.GET(request, { params: { id: TRADE_A } });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toMatchObject({
       error: { code: "NOT_FOUND", message: "Trade not found" },
     });
@@ -293,6 +326,7 @@ describe("GET /api/trades/[id]", () => {
     const response = await route.GET(request, { params: { id: TRADE_A } });
 
     expect(response.status).toBe(401);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 
@@ -335,6 +369,7 @@ describe("PATCH /api/trades/[id]", () => {
     const response = await route.PATCH(request, { params: { id: TRADE_A } });
 
     expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("returns 404 when trade to update does not exist or belongs to another user", async () => {
@@ -350,6 +385,7 @@ describe("PATCH /api/trades/[id]", () => {
     const response = await route.PATCH(request, { params: { id: TRADE_A } });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 });
 
@@ -384,6 +420,7 @@ describe("DELETE /api/trades/[id]", () => {
     const response = await route.DELETE(request, { params: { id: TRADE_A } });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("returns 401 when unauthenticated", async () => {
@@ -397,27 +434,6 @@ describe("DELETE /api/trades/[id]", () => {
     const response = await route.DELETE(request, { params: { id: TRADE_A } });
 
     expect(response.status).toBe(401);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// OPTIONS & 405 Method Not Allowed
-// ---------------------------------------------------------------------------
-
-describe("OPTIONS /api/trades & OPTIONS /api/trades/[id]", () => {
-  it("returns 204 with Allow header for /api/trades OPTIONS", async () => {
-    const route = await import("./route");
-    const response = await route.OPTIONS();
-
-    expect(response.status).toBe(204);
-    expect(response.headers.get("Allow")).toBe("GET, POST, OPTIONS");
-  });
-
-  it("returns 204 with Allow header for /api/trades/[id] OPTIONS", async () => {
-    const route = await import("./[id]/route");
-    const response = await route.OPTIONS();
-
-    expect(response.status).toBe(204);
-    expect(response.headers.get("Allow")).toBe("GET, PATCH, DELETE, OPTIONS");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 });

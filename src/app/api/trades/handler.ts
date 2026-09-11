@@ -29,7 +29,10 @@ export function handleTradeApiError(err: unknown): NextResponse<unknown> {
           fieldErrors: svcErr.fieldErrors,
         },
       },
-      { status: svcErr.httpStatus },
+      {
+        status: svcErr.httpStatus,
+        headers: { "Cache-Control": "no-store" },
+      },
     );
   }
 
@@ -42,6 +45,10 @@ export function handleTradeApiError(err: unknown): NextResponse<unknown> {
         fieldErrors: [],
       },
     },
-    { status: 500 },
+    {
+      status: 500,
+      headers: { "Cache-Control": "no-store" },
+    },
   );
 }
+

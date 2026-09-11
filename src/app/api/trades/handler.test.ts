@@ -24,6 +24,7 @@ describe("handleTradeApiError — TradeServiceError", () => {
 
     const response = handleTradeApiError(err);
     expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toMatchObject({
       error: {
         code: "VALIDATION",
