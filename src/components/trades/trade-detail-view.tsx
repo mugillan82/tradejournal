@@ -38,6 +38,7 @@ import type { TradeDto } from "@/lib/trading/trade/types";
 import type { TradingAccountDto } from "@/lib/trading/account/types";
 import { EditTradeModal } from "./edit-trade-modal";
 import { DeleteTradeDialog } from "./delete-trade-dialog";
+import { TradeAttachmentsSection } from "./trade-attachments-section";
 
 interface TradeDetailViewProps {
   tradeId: string;
@@ -627,6 +628,9 @@ export function TradeDetailView({ tradeId }: TradeDetailViewProps) {
               </div>
             </div>
           </div>
+
+          {/* ATTACHMENTS & EVIDENCE SECTION */}
+          <TradeAttachmentsSection tradeId={trade.id} />
 
           {/* Edit Modal */}
           <EditTradeModal

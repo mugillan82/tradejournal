@@ -470,3 +470,179 @@ export async function deleteTradeClient(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Attachment Client Data Layer
+// ---------------------------------------------------------------------------
+
+export interface AttachmentClientDto {
+  readonly id: string;
+  readonly tradeId: string | null;
+  readonly journalEntryId: string | null;
+  readonly fileName: string;
+  readonly fileUrl: string;
+  readonly fileSize: number;
+  readonly mimeType: string;
+  readonly uploadedAt: Date;
+}
+
+/**
+ * Fetches all attachments for a specific trade.
+ */
+export async function fetchTradeAttachments(
+  tradeId: string,
+  signal?: AbortSignal,
+): Promise<ReadonlyArray<AttachmentClientDto>> {
+  if (!tradeId) {
+    throw new TradeClientApiError("Trade ID is required", 400, "VALIDATION");
+  }
+
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/attachments`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // Non-JSON response
+      }
+      const message =
+        errBody?.error?.message || `Failed to fetch attachments (${res.status})`;
+      const code =
+        errBody?.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR");
+      throw new TradeClientApiError(message, res.status, code);
+    }
+
+    const data = await res.json();
+    return (data || []).map((att: AttachmentClientDto) => ({
+      ...att,
+      uploadedAt: new Date(att.uploadedAt),
+    }));
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    const msg =
+      err instanceof Error
+        ? err.message
+        : "Network error occurred while fetching attachments";
+    throw new TradeClientApiError(msg, 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Uploads an attachment for a trade using multipart/form-data.
+ */
+export async function uploadTradeAttachment(
+  tradeId: string,
+  file: File,
+  signal?: AbortSignal,
+): Promise<AttachmentClientDto> {
+  if (!tradeId) {
+    throw new TradeClientApiError("Trade ID is required", 400, "VALIDATION");
+  }
+  if (!file) {
+    throw new TradeClientApiError("File is required", 400, "VALIDATION");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/attachments`, {
+      method: "POST",
+      body: formData,
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: {
+        error?: {
+          message?: string;
+          code?: string;
+          fieldErrors?: Array<{ path: string; message: string }>;
+        };
+      } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // Non-JSON response
+      }
+      const message =
+        errBody?.error?.message || `Failed to upload attachment (${res.status})`;
+      const code = errBody?.error?.code || "API_ERROR";
+      const fieldErrors = errBody?.error?.fieldErrors;
+
+      throw new TradeClientApiError(message, res.status, code, fieldErrors);
+    }
+
+    const data = await res.json();
+    return {
+      ...data,
+      uploadedAt: new Date(data.uploadedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    const msg =
+      err instanceof Error
+        ? err.message
+        : "Network error occurred while uploading attachment";
+    throw new TradeClientApiError(msg, 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Deletes an attachment from a trade.
+ */
+export async function deleteTradeAttachment(
+  tradeId: string,
+  attachmentId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (!tradeId) {
+    throw new TradeClientApiError("Trade ID is required", 400, "VALIDATION");
+  }
+  if (!attachmentId) {
+    throw new TradeClientApiError("Attachment ID is required", 400, "VALIDATION");
+  }
+
+  try {
+    const res = await fetch(
+      `/api/trades/${encodeURIComponent(tradeId)}/attachments/${encodeURIComponent(attachmentId)}`,
+      {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+        signal,
+      },
+    );
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // Non-JSON response
+      }
+      const message =
+        errBody?.error?.message || `Failed to delete attachment (${res.status})`;
+      const code =
+        errBody?.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR");
+
+      throw new TradeClientApiError(message, res.status, code);
+    }
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    const msg =
+      err instanceof Error
+        ? err.message
+        : "Network error occurred while deleting attachment";
+    throw new TradeClientApiError(msg, 500, "NETWORK_ERROR");
+  }
+}
+
+

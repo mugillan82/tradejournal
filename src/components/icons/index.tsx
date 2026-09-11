@@ -15,7 +15,7 @@
 import { type SVGProps, forwardRef } from "react";
 
 /** Valid size values matching Tailwind sizing scale. */
-export type IconSize = 12 | 14 | 16 | 18 | 20 | 24;
+export type IconSize = 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, "xmlns"> {
   /** Pixel size (width & height). Default 16. */
@@ -444,5 +444,42 @@ export function Copy({ size, strokeWidth, ...props }: IconProps) {
   );
 }
 
+export function Paperclip({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l7.88-7.88" />
+    </Icon>
+  );
+}
+
+export function Eye({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </Icon>
+  );
+}
+
+export function Upload({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" x2="12" y1="3" y2="15" />
+    </Icon>
+  );
+}
+
+export function FileIcon({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    </Icon>
+  );
+}
+
 /** Re-export IconProps for consumers (e.g. navigation.ts). */
 export type { IconProps };
+

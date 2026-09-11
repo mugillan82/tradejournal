@@ -11,6 +11,30 @@
 export * from "./trade";
 
 export type {
+  AllowedAttachmentMimeType,
+  AttachmentDto,
+  CreateAttachmentInput,
+  AttachmentServiceErrorCode,
+  AttachmentValidationResult,
+  AttachmentStorageProvider,
+} from "./attachment";
+
+export {
+  ALLOWED_ATTACHMENT_MIME_TYPES,
+  MAX_ATTACHMENT_SIZE_BYTES,
+  MAX_ATTACHMENT_SIZE_LABEL,
+  AttachmentServiceError,
+  validateAttachmentUpload,
+  sanitizeFileName,
+  listTradeAttachments,
+  uploadTradeAttachment,
+  deleteTradeAttachment,
+  getTradeAttachmentContent,
+  getAttachmentStorageProvider,
+  setAttachmentStorageProvider,
+} from "./attachment";
+
+export type {
   TradingAccountTypeValue,
   TradingAccountSortField,
   TradingAccountListFilters,
@@ -29,4 +53,5 @@ export {
   updateTradingAccount,
   deleteTradingAccount,
 } from "./account";
+
 
