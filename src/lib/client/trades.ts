@@ -645,4 +645,580 @@ export async function deleteTradeAttachment(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Journal & Trade Notes & Reviews Client Layer
+// ---------------------------------------------------------------------------
+
+import type {
+  JournalMoodValue,
+  JournalEntryDto,
+  CreateJournalEntryInput,
+  UpdateJournalEntryInput,
+  JournalEntryListFilters,
+  JournalEntryListResult,
+  TradeNoteDto,
+  CreateTradeNoteInput,
+  UpdateTradeNoteInput,
+  ReviewDto,
+  CreateReviewInput,
+  UpdateReviewInput,
+  ReviewListFilters,
+  ReviewListResult,
+} from "@/lib/trading/journal/types";
+
+export type {
+  JournalMoodValue,
+  JournalEntryDto,
+  CreateJournalEntryInput,
+  UpdateJournalEntryInput,
+  JournalEntryListFilters,
+  JournalEntryListResult,
+  TradeNoteDto,
+  CreateTradeNoteInput,
+  UpdateTradeNoteInput,
+  ReviewDto,
+  CreateReviewInput,
+  UpdateReviewInput,
+  ReviewListFilters,
+  ReviewListResult,
+};
+
+/**
+ * Lists journal entries with optional date/mood filters.
+ */
+export async function fetchJournalEntries(
+  filters: JournalEntryListFilters = {},
+  page = 1,
+  pageSize = 50,
+  signal?: AbortSignal,
+): Promise<JournalEntryListResult> {
+  const params = new URLSearchParams();
+  if (filters.fromDate) params.set("fromDate", filters.fromDate.toISOString());
+  if (filters.toDate) params.set("toDate", filters.toDate.toISOString());
+  if (filters.mood) params.set("mood", filters.mood);
+  params.set("page", page.toString());
+  params.set("pageSize", pageSize.toString());
+
+  try {
+    const res = await fetch(`/api/journal?${params.toString()}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to fetch journal entries (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+      );
+    }
+
+    const data = await res.json();
+    return {
+      ...data,
+      items: (data.items || []).map((item: JournalEntryDto) => ({
+        ...item,
+        entryDate: new Date(item.entryDate),
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+      })),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while fetching journal entries", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Creates a new daily journal entry.
+ */
+export async function createJournalEntryClient(
+  input: CreateJournalEntryInput,
+  signal?: AbortSignal,
+): Promise<JournalEntryDto> {
+  try {
+    const payload = {
+      ...input,
+      entryDate: input.entryDate instanceof Date ? input.entryDate.toISOString() : input.entryDate,
+    };
+
+    const res = await fetch("/api/journal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to create journal entry (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const item = await res.json();
+    return {
+      ...item,
+      entryDate: new Date(item.entryDate),
+      createdAt: new Date(item.createdAt),
+      updatedAt: new Date(item.updatedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while creating journal entry", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Updates an existing daily journal entry.
+ */
+export async function updateJournalEntryClient(
+  id: string,
+  input: UpdateJournalEntryInput,
+  signal?: AbortSignal,
+): Promise<JournalEntryDto> {
+  try {
+    const res = await fetch(`/api/journal/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(input),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to update journal entry (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const item = await res.json();
+    return {
+      ...item,
+      entryDate: new Date(item.entryDate),
+      createdAt: new Date(item.createdAt),
+      updatedAt: new Date(item.updatedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating journal entry", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Deletes a journal entry by ID.
+ */
+export async function deleteJournalEntryClient(id: string, signal?: AbortSignal): Promise<void> {
+  try {
+    const res = await fetch(`/api/journal/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to delete journal entry (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while deleting journal entry", 500, "NETWORK_ERROR");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Trade Notes Client Layer
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches all notes for a specific trade.
+ */
+export async function fetchTradeNotes(tradeId: string, signal?: AbortSignal): Promise<ReadonlyArray<TradeNoteDto>> {
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/notes`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to fetch trade notes (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+
+    const data = await res.json();
+    return (data || []).map((n: TradeNoteDto) => ({
+      ...n,
+      createdAt: new Date(n.createdAt),
+    }));
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while fetching trade notes", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Adds a new note to a trade.
+ */
+export async function createTradeNoteClient(
+  tradeId: string,
+  content: string,
+  signal?: AbortSignal,
+): Promise<TradeNoteDto> {
+  try {
+    const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ content }),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to add trade note (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const data = await res.json();
+    return {
+      ...data,
+      createdAt: new Date(data.createdAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while creating trade note", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Updates a trade note.
+ */
+export async function updateTradeNoteClient(
+  tradeId: string,
+  noteId: string,
+  content: string,
+  signal?: AbortSignal,
+): Promise<TradeNoteDto> {
+  try {
+    const res = await fetch(
+      `/api/trades/${encodeURIComponent(tradeId)}/notes/${encodeURIComponent(noteId)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ content }),
+        signal,
+      },
+    );
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to update trade note (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const data = await res.json();
+    return {
+      ...data,
+      createdAt: new Date(data.createdAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating trade note", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Deletes a trade note.
+ */
+export async function deleteTradeNoteClient(
+  tradeId: string,
+  noteId: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  try {
+    const res = await fetch(
+      `/api/trades/${encodeURIComponent(tradeId)}/notes/${encodeURIComponent(noteId)}`,
+      {
+        method: "DELETE",
+        headers: { Accept: "application/json" },
+        signal,
+      },
+    );
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to delete trade note (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while deleting trade note", 500, "NETWORK_ERROR");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Trade Reviews Client Layer
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches all reviews with optional date range or search filter.
+ */
+export async function fetchReviews(
+  filters: ReviewListFilters = {},
+  page = 1,
+  pageSize = 50,
+  signal?: AbortSignal,
+): Promise<ReviewListResult> {
+  const params = new URLSearchParams();
+  if (filters.fromDate) params.set("fromDate", filters.fromDate.toISOString());
+  if (filters.toDate) params.set("toDate", filters.toDate.toISOString());
+  if (filters.search) params.set("search", filters.search);
+  params.set("page", page.toString());
+  params.set("pageSize", pageSize.toString());
+
+  try {
+    const res = await fetch(`/api/reviews?${params.toString()}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to fetch reviews (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+      );
+    }
+
+    const data = await res.json();
+    return {
+      ...data,
+      items: (data.items || []).map((r: ReviewDto) => ({
+        ...r,
+        reviewDate: new Date(r.reviewDate),
+        createdAt: new Date(r.createdAt),
+        updatedAt: new Date(r.updatedAt),
+      })),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while fetching reviews", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Creates a new trade review.
+ */
+export async function createReviewClient(
+  input: CreateReviewInput,
+  signal?: AbortSignal,
+): Promise<ReviewDto> {
+  try {
+    const payload = {
+      ...input,
+      reviewDate: input.reviewDate instanceof Date ? input.reviewDate.toISOString() : input.reviewDate,
+    };
+
+    const res = await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to create review (${res.status})`,
+        res.status,
+        errBody.error?.code || "API_ERROR",
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const data = await res.json();
+    return {
+      ...data,
+      reviewDate: new Date(data.reviewDate),
+      createdAt: new Date(data.createdAt),
+      updatedAt: new Date(data.updatedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while creating review", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Updates a trade review.
+ */
+export async function updateReviewClient(
+  id: string,
+  input: UpdateReviewInput,
+  signal?: AbortSignal,
+): Promise<ReviewDto> {
+  try {
+    const payload: Record<string, unknown> = { ...input };
+    if (input.reviewDate !== undefined) {
+      payload.reviewDate =
+        input.reviewDate instanceof Date ? input.reviewDate.toISOString() : input.reviewDate;
+    }
+
+    const res = await fetch(`/api/reviews/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string; fieldErrors?: Array<{ path: string; message: string }> } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to update review (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+        errBody.error?.fieldErrors,
+      );
+    }
+
+    const data = await res.json();
+    return {
+      ...data,
+      reviewDate: new Date(data.reviewDate),
+      createdAt: new Date(data.createdAt),
+      updatedAt: new Date(data.updatedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while updating review", 500, "NETWORK_ERROR");
+  }
+}
+
+/**
+ * Deletes a review by ID.
+ */
+export async function deleteReviewClient(id: string, signal?: AbortSignal): Promise<void> {
+  try {
+    const res = await fetch(`/api/reviews/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: { error?: { message?: string; code?: string } } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // ignore
+      }
+      throw new TradeClientApiError(
+        errBody.error?.message || `Failed to delete review (${res.status})`,
+        res.status,
+        errBody.error?.code || (res.status === 404 ? "NOT_FOUND" : "API_ERROR"),
+      );
+    }
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw new TradeClientApiError("Network error occurred while deleting review", 500, "NETWORK_ERROR");
+  }
+}
+
+
 

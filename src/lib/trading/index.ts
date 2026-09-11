@@ -54,4 +54,54 @@ export {
   deleteTradingAccount,
 } from "./account";
 
+export type {
+  JournalMoodValue,
+  JournalEntryDto,
+  CreateJournalEntryInput,
+  UpdateJournalEntryInput,
+  JournalEntryListFilters,
+  JournalEntryListPagination,
+  JournalEntryListResult,
+  TradeNoteDto,
+  CreateTradeNoteInput,
+  UpdateTradeNoteInput,
+  ReviewTradeItemDto,
+  ReviewDto,
+  CreateReviewTradeInput,
+  CreateReviewInput,
+  UpdateReviewInput,
+  ReviewListFilters,
+  ReviewListPagination,
+  ReviewListResult,
+  JournalServiceErrorCode,
+} from "./journal";
+
+export {
+  ALLOWED_JOURNAL_MOODS,
+  JournalServiceError,
+  validateCreateJournalEntryInput,
+  validateUpdateJournalEntryInput,
+  validateCreateTradeNoteInput,
+  validateUpdateTradeNoteInput,
+  validateCreateReviewInput,
+  validateUpdateReviewInput,
+  normalizeDateToUtcMidnight,
+  createJournalEntry,
+  getJournalEntryById,
+  listJournalEntries,
+  updateJournalEntry,
+  deleteJournalEntry,
+  listTradeNotes,
+  createTradeNote,
+  updateTradeNote,
+  deleteTradeNote,
+  createReview,
+  getReviewById,
+  listReviews,
+  updateReview,
+  deleteReview,
+  listReviewsForTrade,
+} from "./journal";
+
+
 

@@ -15,7 +15,7 @@
 import { type SVGProps, forwardRef } from "react";
 
 /** Valid size values matching Tailwind sizing scale. */
-export type IconSize = 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
+export type IconSize = 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32 | 36 | 40;
 
 interface IconProps extends Omit<SVGProps<SVGSVGElement>, "xmlns"> {
   /** Pixel size (width & height). Default 16. */
@@ -480,6 +480,23 @@ export function FileIcon({ size, strokeWidth, ...props }: IconProps) {
   );
 }
 
+export function Star({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </Icon>
+  );
+}
+
+export function MessageSquare({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </Icon>
+  );
+}
+
 /** Re-export IconProps for consumers (e.g. navigation.ts). */
 export type { IconProps };
+
 
