@@ -46,13 +46,14 @@ async function authenticateRequest(): Promise<NextResponse<unknown> | null> {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> | { id: string } },
 ): Promise<NextResponse<unknown>> {
   const authResponse = await authenticateRequest();
   if (authResponse) return authResponse;
 
   try {
-    const account = await getTradingAccountById(params.id);
+    const { id } = await params;
+    const account = await getTradingAccountById(id);
     return NextResponse.json(account, {
       headers: { "Cache-Control": "no-store" },
     });
@@ -67,7 +68,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> | { id: string } },
 ): Promise<NextResponse<unknown>> {
   const authResponse = await authenticateRequest();
   if (authResponse) return authResponse;
@@ -89,8 +90,9 @@ export async function PATCH(
   }
 
   try {
+    const { id } = await params;
     const account = await updateTradingAccount(
-      params.id,
+      id,
       body as Parameters<typeof updateTradingAccount>[1],
     );
     return NextResponse.json(account, {
@@ -107,13 +109,14 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> | { id: string } },
 ): Promise<NextResponse<unknown>> {
   const authResponse = await authenticateRequest();
   if (authResponse) return authResponse;
 
   try {
-    await deleteTradingAccount(params.id);
+    const { id } = await params;
+    await deleteTradingAccount(id);
     return new NextResponse(null, {
       status: 204,
       headers: { "Cache-Control": "no-store" },

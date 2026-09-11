@@ -19,7 +19,6 @@ import {
   listTradingAccounts,
 } from "@/lib/trading/account/service";
 import type {
-  TradingAccountListFilters,
   TradingAccountListSort,
 } from "@/lib/trading/account/types";
 import { requireServerUserId } from "@/lib/auth/session";
@@ -101,7 +100,13 @@ export async function GET(request: NextRequest): Promise<NextResponse<unknown>> 
     const type = searchParams.get("type");
     const search = searchParams.get("search");
 
-    const filters: TradingAccountListFilters = {};
+    const filters: {
+      ids?: string[];
+      isActive?: boolean;
+      currency?: string;
+      type?: string;
+      search?: string;
+    } = {};
 
     if (ids) {
       filters.ids = ids.split(",").map((id) => id.trim());

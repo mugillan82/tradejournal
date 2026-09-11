@@ -105,7 +105,17 @@ export async function GET(request: NextRequest): Promise<NextResponse<unknown>> 
     const exitDateTo = searchParams.get("exitDateTo");
     const search = searchParams.get("search");
 
-    const filters: TradeListFilters = {};
+    const filters: {
+      ids?: string[];
+      tradingAccountId?: string;
+      side?: TradeListFilters["side"];
+      status?: TradeListFilters["status"];
+      entryDateFrom?: Date;
+      entryDateTo?: Date;
+      exitDateFrom?: Date;
+      exitDateTo?: Date;
+      search?: string;
+    } = {};
 
     if (ids) {
       filters.ids = ids.split(",").map((id) => id.trim());

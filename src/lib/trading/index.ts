@@ -9,5 +9,23 @@
  */
 
 export * from "./trade";
-export * from "./account";
 
+export type {
+  TradingAccountTypeValue,
+  TradingAccountSortField,
+  TradingAccountListFilters,
+  TradingAccountListSort,
+  TradingAccountListPagination,
+  TradingAccountDto,
+  CreateTradingAccountInput,
+  UpdateTradingAccountInput,
+  TradingAccountListResult,
+} from "./account";
+
+export {
+  createTradingAccount,
+  getTradingAccountById,
+  listTradingAccounts,
+  updateTradingAccount,
+  deleteTradingAccount,
+} from "./account";

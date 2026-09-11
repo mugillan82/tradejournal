@@ -49,7 +49,7 @@ vi.mock("@/lib/db/client", () => ({
     },
     $transaction: (arg: unknown) => {
       if (typeof arg === "function") {
-        return (arg as Function)({
+        return (arg as (tx: unknown) => unknown)({
           tradingAccount: {
             findFirst: (...a: unknown[]) => mockTradingAccountFindFirst(...a),
             delete: (...a: unknown[]) => mockTradingAccountDelete(...a),

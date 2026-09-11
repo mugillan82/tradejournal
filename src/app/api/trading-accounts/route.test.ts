@@ -70,7 +70,7 @@ async function dispatchRouteRequest(
   const handler = routeModule[method];
 
   if (typeof handler === "function") {
-    return (handler as Function)(request, { params });
+    return (handler as (req: NextRequest, ctx: { params?: { id: string } }) => Promise<NextResponse>)(request, { params });
   }
 
   const supportedMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].filter(
