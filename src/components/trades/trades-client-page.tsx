@@ -260,7 +260,7 @@ export function TradesClientPage() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/imports"
+            href="/import/smart"
             className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3.5 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
           >
             <Download size={16} />

@@ -165,7 +165,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<unknown>> 
       pageSize: pageSize ? parseInt(pageSize, 10) : 50,
     };
 
-    const result = await listTrades({ filters, sort, pagination });
+    const result = await listTrades({ filters: filters as TradeListFilters, sort, pagination });
     return NextResponse.json(result, {
       headers: { "Cache-Control": "no-store" },
     });

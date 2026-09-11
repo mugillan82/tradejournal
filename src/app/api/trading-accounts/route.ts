@@ -19,6 +19,7 @@ import {
   listTradingAccounts,
 } from "@/lib/trading/account/service";
 import type {
+  TradingAccountListFilters,
   TradingAccountListSort,
 } from "@/lib/trading/account/types";
 import { requireServerUserId } from "@/lib/auth/session";
@@ -174,7 +175,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<unknown>> 
     }
 
     const result = await listTradingAccounts({
-      filters,
+      filters: filters as TradingAccountListFilters,
       sort,
       pagination: { page, pageSize },
     });
