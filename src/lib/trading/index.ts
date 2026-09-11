@@ -5,6 +5,9 @@
  *
  * Current sub-domains:
  * - trade/
+ * - account/
  */
 
 export * from "./trade";
+export * from "./account";
+
