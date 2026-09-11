@@ -80,7 +80,7 @@ export const navigation: NavSection[] = [
         label: "Add Trade",
         href: "/trades/new",
         icon: PlusCircle,
-        status: "coming-soon",
+        status: "ready",
       },
       {
         label: "Smart Import",

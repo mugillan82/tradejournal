@@ -223,3 +223,103 @@ export async function fetchTradingAccounts(signal?: AbortSignal): Promise<Readon
     return [];
   }
 }
+
+/**
+ * Payload contract for creating a trade via the client layer.
+ * Values are stringified decimals and serialized ISO dates.
+ */
+export interface CreateTradeClientInput {
+  readonly tradingAccountId: string;
+  readonly side: TradeDto["side"];
+  readonly entryPrice: string;
+  readonly entryDate: Date | string;
+  readonly exitPrice?: string | null;
+  readonly exitDate?: Date | string | null;
+  readonly stopLoss?: string | null;
+  readonly takeProfit?: string | null;
+  readonly riskAmount?: string | null;
+  readonly plannedRiskReward?: string | null;
+  readonly quantity: string;
+  readonly commission?: string | null;
+  readonly fees?: string | null;
+  readonly swap?: string | null;
+  readonly grossPnl?: string | null;
+  readonly netPnl?: string | null;
+  readonly status?: TradeDto["status"];
+  readonly title?: string | null;
+  readonly notes?: string | null;
+  readonly strategyId?: string | null;
+  readonly setupId?: string | null;
+}
+
+/**
+ * Creates a new trade record by posting to `POST /api/trades`.
+ */
+export async function createTradeClient(
+  input: CreateTradeClientInput,
+  signal?: AbortSignal,
+): Promise<TradeDto> {
+  const payload = {
+    ...input,
+    entryDate:
+      input.entryDate instanceof Date
+        ? input.entryDate.toISOString()
+        : input.entryDate,
+    exitDate:
+      input.exitDate instanceof Date
+        ? input.exitDate.toISOString()
+        : input.exitDate ?? null,
+  };
+
+  try {
+    const res = await fetch("/api/trades", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal,
+    });
+
+    if (!res.ok) {
+      let errBody: {
+        error?: {
+          message?: string;
+          code?: string;
+          fieldErrors?: Array<{ path: string; message: string }>;
+        };
+      } = {};
+      try {
+        errBody = await res.json();
+      } catch {
+        // Non-JSON response
+      }
+
+      const message =
+        errBody?.error?.message || `Failed to create trade (${res.status})`;
+      const code = errBody?.error?.code || "API_ERROR";
+      const fieldErrors = errBody?.error?.fieldErrors;
+
+      throw new TradeClientApiError(message, res.status, code, fieldErrors);
+    }
+
+    const data = await res.json();
+    return {
+      ...data,
+      entryDate: new Date(data.entryDate),
+      exitDate: data.exitDate ? new Date(data.exitDate) : null,
+      createdAt: new Date(data.createdAt),
+      updatedAt: new Date(data.updatedAt),
+    };
+  } catch (err: unknown) {
+    if (err instanceof TradeClientApiError) throw err;
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    const msg =
+      err instanceof Error
+        ? err.message
+        : "Network error occurred while creating trade";
+    throw new TradeClientApiError(msg, 500, "NETWORK_ERROR");
+  }
+}
+
