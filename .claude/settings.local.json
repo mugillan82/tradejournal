@@ -10,7 +10,25 @@
       "Bash(PGPASSWORD=postgres C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\createdb.exe *)",
       "Bash(PGPASSWORD=postgres C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe *)",
       "Bash(npm run *)",
-      "Bash(npx tsx *)"
+      "Bash(npx tsx *)",
+      "Bash(git push *)",
+      "WebSearch",
+      "WebFetch(domain:www.better-auth.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm ls *)",
+      "Bash(npx @better-auth/cli@latest --help)",
+      "Bash(npx @better-auth/cli@latest generate --help)",
+      "Bash(npx @better-auth/cli@latest init --help)",
+      "Bash(npx @better-auth/cli@latest migrate --help)",
+      "Bash(npx @better-auth/cli@latest generate --config src/lib/auth/config.ts -y)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('base64'\\)\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: add authentication foundation *)",
+      "Bash(python -c \"import json, sys; pkg=json.load\\(sys.stdin\\); print\\(json.dumps\\(pkg.get\\('exports', {}\\), indent=2\\)\\)\")",
+      "Bash(tasklist)",
+      "Bash(cmd.exe *)",
+      "Bash(curl *)",
+      "Bash(git commit -m 'feat: add protected application routing *)"
     ]
   }
 }
