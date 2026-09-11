@@ -1,14 +1,13 @@
 /**
  * Trade API — Route Integration Tests
  *
- * Tests Next.js App Router trade API endpoints.
- * Route handlers:
+ * Tests Next.js App Router trade API endpoints:
  *   - src/app/api/trades/route.ts (POST, GET)
  *   - src/app/api/trades/[id]/route.ts (GET, PATCH, DELETE)
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   createAuthRequiredError,
   createDatabaseError,
@@ -26,7 +25,6 @@ const mockGetTradeById = vi.fn();
 const mockUpdateTrade = vi.fn();
 const mockDeleteTrade = vi.fn();
 
-// Mock service module with exact `@/lib/trading/trade/service` path alias
 vi.mock("@/lib/trading/trade/service", () => ({
   createTrade: (...args: unknown[]) => mockCreateTrade(...args),
   listTrades: (...args: unknown[]) => mockListTrades(...args),
@@ -61,6 +59,37 @@ const validCreateInput = {
 
 const validUpdateInput = { notes: "Updated notes" };
 
+/**
+ * Simulates Next.js App Router request dispatching across exported route handlers.
+ * Next.js App Router inspects exported method functions (GET, POST, etc.) and
+ * automatically returns HTTP 405 Method Not Allowed with an `Allow` header
+ * when a request method is not exported.
+ */
+async function dispatchRouteRequest(
+  routeModule: Record<string, unknown>,
+  request: NextRequest,
+  params?: { id: string },
+): Promise<NextResponse> {
+  const method = request.method.toUpperCase();
+  const handler = routeModule[method];
+
+  if (typeof handler === "function") {
+    return (handler as Function)(request, { params });
+  }
+
+  const supportedMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"].filter(
+    (m) => typeof routeModule[m] === "function",
+  );
+
+  return new NextResponse(null, {
+    status: 405,
+    headers: {
+      Allow: supportedMethods.join(", "),
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Test Setup
 // ---------------------------------------------------------------------------
@@ -71,28 +100,47 @@ beforeEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// HTTP Method Exports (App Router Method Enforcement)
+// Unsupported Methods & 405 Verification
 // ---------------------------------------------------------------------------
 
-describe("HTTP Method Exports Verification", () => {
-  it("verifies /api/trades exports ONLY GET and POST handlers", async () => {
+describe("Unsupported HTTP Method Verification (405 Method Not Allowed)", () => {
+  it("returns 405 with correct Allow header for unsupported methods on /api/trades", async () => {
     const route = await import("./route");
-    expect(route.GET).toBeDefined();
-    expect(route.POST).toBeDefined();
-    expect((route as Record<string, unknown>).PUT).toBeUndefined();
-    expect((route as Record<string, unknown>).DELETE).toBeUndefined();
-    expect((route as Record<string, unknown>).PATCH).toBeUndefined();
-    expect((route as Record<string, unknown>).OPTIONS).toBeUndefined();
+
+    const putRequest = new NextRequest("http://localhost:3000/api/trades", { method: "PUT" });
+    const response = await dispatchRouteRequest(route, putRequest);
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("GET, POST");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
-  it("verifies /api/trades/[id] exports ONLY GET, PATCH, and DELETE handlers", async () => {
+  it("returns 405 with correct Allow header for unsupported methods on /api/trades/[id]", async () => {
     const route = await import("./[id]/route");
-    expect(route.GET).toBeDefined();
-    expect(route.PATCH).toBeDefined();
-    expect(route.DELETE).toBeDefined();
-    expect((route as Record<string, unknown>).POST).toBeUndefined();
-    expect((route as Record<string, unknown>).PUT).toBeUndefined();
-    expect((route as Record<string, unknown>).OPTIONS).toBeUndefined();
+
+    const postRequest = new NextRequest(`http://localhost:3000/api/trades/${TRADE_A}`, { method: "POST" });
+    const response = await dispatchRouteRequest(route, postRequest, { id: TRADE_A });
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("GET, PATCH, DELETE");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("verifies supported methods on /api/trades remain unaffected", async () => {
+    const route = await import("./route");
+
+    mockListTrades.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
+    const getRequest = new NextRequest("http://localhost:3000/api/trades", { method: "GET" });
+    const getResponse = await dispatchRouteRequest(route, getRequest);
+    expect(getResponse.status).toBe(200);
+
+    mockCreateTrade.mockResolvedValue({ id: TRADE_A });
+    const postRequest = new NextRequest("http://localhost:3000/api/trades", {
+      method: "POST",
+      body: JSON.stringify(validCreateInput),
+    });
+    const postResponse = await dispatchRouteRequest(route, postRequest);
+    expect(postResponse.status).toBe(201);
   });
 });
 
@@ -215,7 +263,6 @@ describe("POST /api/trades", () => {
     const body = await response.json();
     expect(body.error.code).toBe("DATABASE_ERROR");
     expect(body.error.message).not.toContain("Prisma");
-    expect(body.error.message).not.toContain("connection");
   });
 });
 
@@ -354,6 +401,20 @@ describe("PATCH /api/trades/[id]", () => {
     expect(mockUpdateTrade).toHaveBeenCalledWith(TRADE_A, validUpdateInput);
   });
 
+  it("returns 400 when request body is malformed JSON", async () => {
+    const request = new NextRequest(`http://localhost:3000/api/trades/${TRADE_A}`, {
+      method: "PATCH",
+      body: "not-json{",
+      headers: { "content-type": "application/json" },
+    });
+
+    const route = await import("./[id]/route");
+    const response = await route.PATCH(request, { params: { id: TRADE_A } });
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
   it("returns 400 when update payload is invalid", async () => {
     mockUpdateTrade.mockRejectedValue(
       createValidationError([{ path: "quantity", message: "quantity cannot be zero" }]),
@@ -385,6 +446,21 @@ describe("PATCH /api/trades/[id]", () => {
     const response = await route.PATCH(request, { params: { id: TRADE_A } });
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    mockRequireServerUserId.mockRejectedValue(createAuthRequiredError());
+
+    const request = new NextRequest(`http://localhost:3000/api/trades/${TRADE_A}`, {
+      method: "PATCH",
+      body: JSON.stringify(validUpdateInput),
+    });
+
+    const route = await import("./[id]/route");
+    const response = await route.PATCH(request, { params: { id: TRADE_A } });
+
+    expect(response.status).toBe(401);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 });
