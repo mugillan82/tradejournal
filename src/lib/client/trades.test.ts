@@ -359,7 +359,6 @@ describe("createTradeClient", () => {
           takeProfit: "175.00",
           riskAmount: "1000.00",
           plannedRiskReward: "2.50",
-          actualRMultiple: "2.00",
           quantity: "100",
           grossPnl: "2000.00",
           commission: "5.00",
