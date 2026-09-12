@@ -103,7 +103,7 @@ export const navigation: NavSection[] = [
         label: "Analytics",
         href: "/analytics",
         icon: BarChart3,
-        status: "coming-soon",
+        status: "ready",
       },
       {
         label: "Reports",
