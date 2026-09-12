@@ -157,6 +157,25 @@ export {
   assignTradeSetup,
 } from "./classification";
 
+export type {
+  AnalyticsFilterInput,
+  CorePerformanceMetricsDto,
+  PerformanceByDateItemDto,
+  PerformanceBySymbolItemDto,
+  PerformanceByStrategyItemDto,
+  PerformanceBySetupItemDto,
+  PerformanceByTagItemDto,
+  PerformanceByMistakeItemDto,
+  PerformanceByAccountItemDto,
+  EquityCurvePointDto,
+  AnalyticsOverviewDto,
+  AnalyticsValidationResult,
+  AnalyticsServiceErrorCode,
+} from "./analytics";
 
-
-
+export {
+  AnalyticsServiceError,
+  validateAnalyticsFilterInput,
+  getAnalyticsOverview,
+  computeAnalytics,
+} from "./analytics";
