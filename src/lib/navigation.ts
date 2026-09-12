@@ -109,7 +109,7 @@ export const navigation: NavSection[] = [
         label: "Reports",
         href: "/reports",
         icon: FileText,
-        status: "coming-soon",
+        status: "ready",
       },
       {
         label: "Strategies",
