@@ -156,7 +156,7 @@ export const navigation: NavSection[] = [
         label: "Accounts",
         href: "/accounts",
         icon: Wallet,
-        status: "coming-soon",
+        status: "ready",
       },
       {
         label: "Data Management",

@@ -272,6 +272,25 @@ describe("TradingAccount Service — Update & Delete", () => {
       deleteTradingAccount("foreign-acc"),
     ).rejects.toSatisfy((err: unknown) => err instanceof TradeServiceError && err.code === "NOT_FOUND");
   });
+
+  it("throws VALIDATION error when deletion is blocked by existing trades (P2003)", async () => {
+    mockTradingAccountFindFirst.mockResolvedValue({ id: ACCOUNT_A });
+    const p2003Err = new Prisma.PrismaClientKnownRequestError("Foreign key constraint failed", {
+      code: "P2003",
+      clientVersion: "5.0.0",
+    });
+    mockTradingAccountDelete.mockRejectedValue(p2003Err);
+
+    await expect(
+      deleteTradingAccount(ACCOUNT_A),
+    ).rejects.toSatisfy((err: unknown) => {
+      return (
+        err instanceof TradeServiceError &&
+        err.code === "VALIDATION" &&
+        err.message.includes("associated trades")
+      );
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

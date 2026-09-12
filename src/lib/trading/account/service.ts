@@ -341,6 +341,18 @@ export async function deleteTradingAccount(id: string): Promise<void> {
     }
   } catch (err) {
     if (err instanceof Error && err.name === "TradeServiceError") throw err;
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === "P2003"
+    ) {
+      throw createValidationError([
+        {
+          path: "id",
+          message:
+            "Cannot delete account with associated trades. Deactivate it instead.",
+        },
+      ]);
+    }
     throw createDatabaseError(err);
   }
 }

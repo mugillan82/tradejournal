@@ -677,6 +677,47 @@ export function Calendar({ size, strokeWidth, ...props }: IconProps) {
   );
 }
 
+export function ArrowLeft({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="m12 19-7-7 7-7" />
+      <path d="M19 12H5" />
+    </Icon>
+  );
+}
+
+export function CheckCircle({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </Icon>
+  );
+}
+
+export function Power({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" x2="12" y1="2" y2="12" />
+    </Icon>
+  );
+}
+
+export function Building2({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+      <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+      <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+      <path d="M10 6h4" />
+      <path d="M10 10h4" />
+      <path d="M10 14h4" />
+      <path d="M10 18h4" />
+    </Icon>
+  );
+}
+
 /** Re-export IconProps for consumers (e.g. navigation.ts). */
 export type { IconProps };
 
