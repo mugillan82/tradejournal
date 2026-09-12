@@ -63,7 +63,7 @@ export const navigation: NavSection[] = [
         label: "Calendar",
         href: "/calendar",
         icon: CalendarDays,
-        status: "coming-soon",
+        status: "ready",
       },
     ],
   },
