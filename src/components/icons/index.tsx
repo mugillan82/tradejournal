@@ -552,8 +552,134 @@ export function FolderPlus({ size, strokeWidth, ...props }: IconProps) {
   );
 }
 
+export function TrendingUp({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </Icon>
+  );
+}
+
+export function TrendingDown({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
+      <polyline points="16 17 22 17 22 11" />
+    </Icon>
+  );
+}
+
+export function Zap({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </Icon>
+  );
+}
+
+export function Activity({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </Icon>
+  );
+}
+
+export function ArrowUpRight({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M7 7h10v10" />
+      <path d="M7 17 17 7" />
+    </Icon>
+  );
+}
+
+export function ArrowDownRight({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="m7 7 10 10" />
+      <path d="M17 7v10H7" />
+    </Icon>
+  );
+}
+
+export function ExternalLink({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </Icon>
+  );
+}
+
+export function Layers({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+      <path d="m22 12.5-8.58 3.91a2 2 0 0 1-1.66 0L2 12.5" />
+      <path d="m22 17.5-8.58 3.91a2 2 0 0 1-1.66 0L2 17.5" />
+    </Icon>
+  );
+}
+
+export function PieChart({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+    </Icon>
+  );
+}
+
+export function ShieldCheck({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+      <path d="m9 12 2 2 4-4" />
+    </Icon>
+  );
+}
+
+export function Smile({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      <line x1="9" x2="9.01" y1="9" y2="9" />
+      <line x1="15" x2="15.01" y1="9" y2="9" />
+    </Icon>
+  );
+}
+
+export function ListOrdered({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <line x1="10" x2="21" y1="6" y2="6" />
+      <line x1="10" x2="21" y1="12" y2="12" />
+      <line x1="10" x2="21" y1="18" y2="18" />
+      <path d="M4 6h1v4" />
+      <path d="M4 10h2" />
+      <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
+    </Icon>
+  );
+}
+
+export function Calendar({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+      <line x1="16" x2="16" y1="2" y2="6" />
+      <line x1="8" x2="8" y1="2" y2="6" />
+      <line x1="3" x2="21" y1="10" y2="10" />
+    </Icon>
+  );
+}
+
 /** Re-export IconProps for consumers (e.g. navigation.ts). */
 export type { IconProps };
+
 
 
 

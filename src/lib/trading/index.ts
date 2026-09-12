@@ -179,3 +179,40 @@ export {
   getAnalyticsOverview,
   computeAnalytics,
 } from "./analytics";
+
+export type {
+  SymbolReportItemDto,
+  StrategyReportItemDto,
+  SetupReportItemDto,
+  TagReportItemDto,
+  MistakeReportItemDto,
+  AccountReportItemDto,
+  DirectionReportDto,
+  TimeReportDto,
+  ReportOverviewDto,
+  ReportFilterInput,
+  ReportValidationResult,
+} from "./reports";
+
+export {
+  ReportServiceError,
+  validateReportFilterInput,
+  getReportOverview,
+} from "./reports";
+
+export type {
+  DashboardFilterInput,
+  DashboardTodaySummaryDto,
+  DashboardMonthSummaryDto,
+  DashboardDirectionSummaryDto,
+  DashboardOverviewDto,
+  DashboardValidationResult,
+} from "./dashboard";
+
+export {
+  DashboardServiceError,
+  validateDashboardFilterInput,
+  getDashboardOverview,
+} from "./dashboard";
+
+
