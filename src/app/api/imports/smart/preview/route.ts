@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Process screenshot via Smart Import pipeline
-    const result = await processScreenshot(buffer, file.type, account.id);
+    const result = await processScreenshot(buffer, file.type, account.id, userId);
 
     // If no candidates extracted, return early
     if (result.candidates.length === 0) {

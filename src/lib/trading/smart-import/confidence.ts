@@ -4,7 +4,9 @@ import { validateCandidate } from "../import/validation";
 export function evaluateConfidence(
   candidate: NormalizedTradeCandidate,
   raw: Partial<Record<string, string>>,
-  sourceConfidence: number
+  sourceConfidence: number,
+  usedGemini: boolean = false,
+  ocrTextHint: string = ""
 ): void {
   // First run canonical validation from Import Domain
   const validated = validateCandidate(candidate);
@@ -50,6 +52,18 @@ export function evaluateConfidence(
     reasons.push("Missing trade side (BUY/SELL)");
   }
 
+  // Gemini + OCR cross-check
+  if (usedGemini && ocrTextHint) {
+    const ocrClean = ocrTextHint.replace(/\s+/g, "");
+    if (candidate.entryPrice && ocrClean.includes(candidate.entryPrice.replace(/,/g, ""))) {
+      score = Math.min(1.0, score + 0.1);
+      reasons.push("OCR and Gemini Vision agreement on entry price");
+    } else if (candidate.entryPrice) {
+      score -= 0.15;
+      reasons.push("Gemini extraction could not be independently verified by local OCR");
+    }
+  }
+
   // Determine level
   const clampedScore = Math.max(0, Math.min(1.0, Number(score.toFixed(2))));
   let level: "HIGH" | "MEDIUM" | "LOW" = "HIGH";
@@ -61,7 +75,6 @@ export function evaluateConfidence(
     level,
     reasons,
   };
-
   candidate.validationIssues = issues;
   candidate.isValid = !issues.some((i) => i.level === "ERROR");
 }
