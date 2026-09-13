@@ -103,21 +103,19 @@ CRITICAL INSTRUCTIONS & TRUST BOUNDARY:
     });
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const interaction = await (this.ai as any).interactions.create({
+      const interaction = await this.ai.interactions.create({
         model: "gemini-3.8-flash",
+        store: false,
+        system_instruction: systemInstruction,
         input: promptParts,
-        config: {
-          systemInstruction,
-          responseMimeType: "application/json",
-          responseSchema: schema,
-          temperature: 0.1, // Low temperature for deterministic extraction
-          // Explicitly do not store data if supported by the interactions/REST layer
-          store: false,
+        response_format: {
+          type: "text",
+          mime_type: "application/json",
+          schema: schema,
         },
       });
 
-      const responseText = interaction.text;
+      const responseText = interaction.output_text;
       if (!responseText) {
         throw new Error("Empty response from Gemini Vision");
       }

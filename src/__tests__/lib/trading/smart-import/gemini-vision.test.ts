@@ -58,7 +58,7 @@ describe("GeminiVisionProvider", () => {
     const provider = new GeminiVisionProvider();
     
     mockInteractionsCreate.mockResolvedValueOnce({
-      text: JSON.stringify({
+      output_text: JSON.stringify({
         source: "MT4",
         sourceConfidence: 0.9,
         trades: [
@@ -78,9 +78,15 @@ describe("GeminiVisionProvider", () => {
     // Verify system prompt is sent with strict boundaries
     const callArgs = mockInteractionsCreate.mock.calls[0][0];
     expect(callArgs.model).toBe("gemini-3.8-flash");
-    expect(callArgs.config.store).toBe(false);
-    expect(callArgs.config.systemInstruction).toContain("INJECTION DEFENSE");
-    expect(callArgs.config.systemInstruction).toContain("TRUSTED INSTRUCTIONS");
+    expect(callArgs.store).toBe(false);
+    expect(callArgs.system_instruction).toContain("INJECTION DEFENSE");
+    expect(callArgs.system_instruction).toContain("TRUSTED INSTRUCTIONS");
+
+    // Verify response format exists and is correct
+    expect(callArgs.response_format).toBeDefined();
+    expect(callArgs.response_format.type).toBe("text");
+    expect(callArgs.response_format.mime_type).toBe("application/json");
+    expect(callArgs.response_format.schema).toBeDefined();
     
     // Verify untrusted data isolation
     expect(callArgs.input[1].text).toContain("<untrusted_ocr>");
