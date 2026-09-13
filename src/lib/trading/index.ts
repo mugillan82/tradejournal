@@ -215,4 +215,25 @@ export {
   getDashboardOverview,
 } from "./dashboard";
 
+export type {
+  InsightCategory,
+  InsightSeverity,
+  InsightConfidence,
+  InsightEvidence,
+  TradeInsight,
+  AiAnalysisContext,
+  AiInsightsResponseDto,
+  ReviewAnalysisContext,
+  AiReviewAnalysisDto,
+  AIProvider,
+} from "./ai/types";
 
+export {
+  detectDeterministicPatterns,
+} from "./ai/patterns";
+
+export {
+  generateTradeInsights,
+  analyzeReview,
+  getAiConfigurationStatus,
+} from "./ai/service";

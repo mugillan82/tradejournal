@@ -611,6 +611,23 @@ export function SettingsClientPage() {
                     Primary route redirected to after login.
                   </p>
                 </div>
+
+                {/* AI Intelligence Architecture & Privacy Notice */}
+                <div className="sm:col-span-2 rounded-lg border border-slate-800 bg-slate-950/70 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                      AI Insights & Pattern Engine
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Active (Grounded Analytics)
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    AI generation is completely on-demand and strictly grounded in canonical trading records.
+                    No private keys or credentials are stored in user preferences. The AI analyst has zero live broker
+                    or trade mutation capabilities.
+                  </p>
+                </div>
               </div>
             </div>
           )}

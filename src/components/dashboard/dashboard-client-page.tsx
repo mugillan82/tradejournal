@@ -31,6 +31,7 @@ import { DashboardSkeleton } from "./dashboard-skeleton";
 import { DashboardEmptyState } from "./dashboard-empty-state";
 import { DashboardErrorState } from "./dashboard-error-state";
 import { DashboardCustomizeModal } from "./dashboard-customize-modal";
+import { AiInsightsPanel } from "@/components/ai/ai-insights-panel";
 import { useSettings } from "@/components/settings/settings-provider";
 import { DEFAULT_DASHBOARD_LAYOUT } from "@/lib/trading/settings/types";
 
@@ -218,6 +219,13 @@ export function DashboardClientPage() {
       {!error && dashboardData && (dashboardData.performance.totalTrades > 0 || dashboardData.accounts.length > 0) && (
         <div className="space-y-6">
           {orderedWidgets.map((w) => renderWidget(w.id))}
+
+          {/* AI Insights & Pattern Intelligence Section */}
+          <AiInsightsPanel
+            filters={{ tradingAccountId: filters.tradingAccountId }}
+            title="AI Insights & Pattern Intelligence"
+            compact={true}
+          />
         </div>
       )}
 

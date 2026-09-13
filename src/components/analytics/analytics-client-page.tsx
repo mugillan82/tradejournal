@@ -29,6 +29,7 @@ import { AnalyticsBreakdownsSection } from "./analytics-breakdowns-section";
 import { AnalyticsSkeleton } from "./analytics-skeleton";
 import { AnalyticsEmptyState } from "./analytics-empty-state";
 import { AnalyticsErrorState } from "./analytics-error-state";
+import { AiInsightsPanel } from "@/components/ai/ai-insights-panel";
 
 export function AnalyticsClientPage() {
   const router = useRouter();
@@ -283,6 +284,23 @@ export function AnalyticsClientPage() {
                 byTag={overview.byTag}
                 byMistake={overview.byMistake}
                 byAccount={overview.byAccount}
+              />
+
+              {/* AI Period Analysis & Statistical Patterns */}
+              <AiInsightsPanel
+                filters={{
+                  dateFrom: filters.dateFrom?.toISOString(),
+                  dateTo: filters.dateTo?.toISOString(),
+                  tradingAccountId: filters.tradingAccountId,
+                  symbol: filters.symbol,
+                  side: filters.side,
+                  strategyId: filters.strategyId,
+                  setupId: filters.setupId,
+                  tagId: filters.tagId,
+                  mistakeId: filters.mistakeId,
+                }}
+                title="AI Period Analysis & Statistical Patterns"
+                compact={false}
               />
             </div>
           )}

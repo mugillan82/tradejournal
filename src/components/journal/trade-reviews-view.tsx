@@ -32,6 +32,8 @@ import {
   Star,
   Search,
 } from "@/components/icons";
+import { Sparkles } from "lucide-react";
+import { ReviewAiAnalysisModal } from "@/components/reviews/review-ai-analysis-modal";
 import {
   fetchReviews,
   createReviewApi,
@@ -84,6 +86,7 @@ export function TradeReviewsView() {
   const [templates, setTemplates] = useState<ReadonlyArray<ReviewTemplateDto>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [aiAnalysisReviewId, setAiAnalysisReviewId] = useState<string | null>(null);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -893,6 +896,16 @@ export function TradeReviewsView() {
 
                     <button
                       type="button"
+                      onClick={() => setAiAnalysisReviewId(selectedReview.id)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/20 transition-colors"
+                      title="Analyze review with AI"
+                    >
+                      <Sparkles size={13} />
+                      <span>AI Debrief</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => openEditReview(selectedReview)}
                       className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
                       title="Edit review"
@@ -1242,6 +1255,15 @@ export function TradeReviewsView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Review Analysis Modal */}
+      {aiAnalysisReviewId && (
+        <ReviewAiAnalysisModal
+          reviewId={aiAnalysisReviewId}
+          isOpen={Boolean(aiAnalysisReviewId)}
+          onClose={() => setAiAnalysisReviewId(null)}
+        />
       )}
     </div>
   );
