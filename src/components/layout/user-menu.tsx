@@ -8,8 +8,9 @@
 
 "use client";
 
+import Link from "next/link";
 import { useId, useRef, useState } from "react";
-import { ChevronDown } from "@/components/icons";
+import { ChevronDown, Settings as SettingsIcon, HelpCircle } from "@/components/icons";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 interface UserMenuProps {
@@ -109,6 +110,26 @@ export function UserMenu({ displayName, email }: UserMenuProps) {
             >
               {email}
             </p>
+          </div>
+
+          {/* Navigation links */}
+          <div className="py-1 border-b border-slate-800">
+            <Link
+              href="/settings"
+              role="menuitem"
+              className="flex items-center gap-2.5 px-3 py-1.5 text-xs text-slate-300 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
+            >
+              <SettingsIcon size={14} className="text-slate-400" />
+              <span>Settings & Customization</span>
+            </Link>
+            <Link
+              href="/help"
+              role="menuitem"
+              className="flex items-center gap-2.5 px-3 py-1.5 text-xs text-slate-300 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
+            >
+              <HelpCircle size={14} className="text-slate-400" />
+              <span>Documentation & Help</span>
+            </Link>
           </div>
 
           {/* Sign out */}

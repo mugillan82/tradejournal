@@ -7,7 +7,7 @@
 "use client";
 
 import React from "react";
-import { RefreshCw, LayoutDashboard } from "@/components/icons";
+import { RefreshCw, LayoutDashboard, Sliders } from "@/components/icons";
 import type { TradingAccountDto } from "@/lib/client/dashboard";
 
 interface DashboardHeaderProps {
@@ -16,6 +16,7 @@ interface DashboardHeaderProps {
   onAccountChange: (accountId?: string) => void;
   onRefresh: () => void;
   isRefreshing?: boolean;
+  onCustomize?: () => void;
 }
 
 export function DashboardHeader({
@@ -24,6 +25,7 @@ export function DashboardHeader({
   onAccountChange,
   onRefresh,
   isRefreshing = false,
+  onCustomize,
 }: DashboardHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
@@ -64,6 +66,19 @@ export function DashboardHeader({
               ))}
             </select>
           </div>
+        )}
+
+        {/* Customize Layout Button */}
+        {onCustomize && (
+          <button
+            type="button"
+            onClick={onCustomize}
+            aria-label="Customize dashboard layout"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-slate-100 transition-colors"
+          >
+            <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Customize</span>
+          </button>
         )}
 
         {/* Refresh Button */}

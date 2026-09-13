@@ -30,6 +30,9 @@ import { DashboardQuickActions } from "./dashboard-quick-actions";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { DashboardEmptyState } from "./dashboard-empty-state";
 import { DashboardErrorState } from "./dashboard-error-state";
+import { DashboardCustomizeModal } from "./dashboard-customize-modal";
+import { useSettings } from "@/components/settings/settings-provider";
+import { DEFAULT_DASHBOARD_LAYOUT } from "@/lib/trading/settings/types";
 
 export function DashboardClientPage() {
   const router = useRouter();
@@ -57,6 +60,14 @@ export function DashboardClientPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  const { preferences } = useSettings();
+  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
+
+  const orderedWidgets = useMemo(() => {
+    const layout = preferences?.dashboardLayout ?? DEFAULT_DASHBOARD_LAYOUT;
+    return [...layout].sort((a, b) => a.order - b.order).filter((w) => w.visible);
+  }, [preferences?.dashboardLayout]);
 
   // Update URL parameters
   const updateUrlParams = useCallback(
@@ -120,6 +131,60 @@ export function DashboardClientPage() {
     setReloadTrigger((prev) => prev + 1);
   };
 
+  const renderWidget = (id: string) => {
+    if (!dashboardData) return null;
+    switch (id) {
+      case "performance-hero":
+        return (
+          <DashboardPerformanceHero
+            key={id}
+            metrics={dashboardData.performance}
+            equityCurve={dashboardData.equityCurve}
+          />
+        );
+      case "today-card":
+        return (
+          <DashboardTodayCard
+            key={id}
+            today={dashboardData.today}
+            currentMonth={dashboardData.currentMonth}
+          />
+        );
+      case "breakdowns":
+        return (
+          <DashboardBreakdownsSection
+            key={id}
+            topSymbols={dashboardData.topSymbols}
+            topStrategies={dashboardData.topStrategies}
+            direction={dashboardData.direction}
+          />
+        );
+      case "recent-trades":
+        return (
+          <DashboardRecentTrades key={id} trades={dashboardData.recentTrades} />
+        );
+      case "calendar-preview":
+        return (
+          <DashboardCalendarPreview key={id} calendar={dashboardData.calendar} />
+        );
+      case "accounts-card":
+        return (
+          <DashboardAccountsCard key={id} accounts={dashboardData.accounts} />
+        );
+      case "journal-preview":
+        return (
+          <DashboardJournalPreview
+            key={id}
+            entries={dashboardData.recentJournalEntries}
+          />
+        );
+      case "quick-actions":
+        return <DashboardQuickActions key={id} />;
+      default:
+        return null;
+    }
+  };
+
   if (isLoading && dashboardData === null && !error) {
     return <DashboardSkeleton />;
   }
@@ -129,13 +194,14 @@ export function DashboardClientPage() {
       className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6"
       data-testid="dashboard-page"
     >
-      {/* 1. Header with Account Filter & Refresh */}
+      {/* 1. Header with Account Filter, Refresh & Customize */}
       <DashboardHeader
         accounts={dashboardData?.accounts || []}
         selectedAccountId={filters.tradingAccountId}
         onAccountChange={handleAccountChange}
         onRefresh={handleReload}
         isRefreshing={isRefreshing}
+        onCustomize={() => setIsCustomizeOpen(true)}
       />
 
       {/* 2. Error State */}
@@ -148,44 +214,18 @@ export function DashboardClientPage() {
         <DashboardEmptyState hasAccount={false} />
       )}
 
-      {/* 4. Main Dashboard Grid */}
+      {/* 4. Main Dashboard Grid (Dynamic Widget Ordering) */}
       {!error && dashboardData && (dashboardData.performance.totalTrades > 0 || dashboardData.accounts.length > 0) && (
         <div className="space-y-6">
-          {/* Performance Hero (Net P&L, Win Rate, Profit Factor, Equity Curve) */}
-          <DashboardPerformanceHero
-            metrics={dashboardData.performance}
-            equityCurve={dashboardData.equityCurve}
-          />
-
-          {/* Today & Current Month Context */}
-          <DashboardTodayCard
-            today={dashboardData.today}
-            currentMonth={dashboardData.currentMonth}
-          />
-
-          {/* Breakdown Highlights (Top Symbols, Strategies, Long vs Short) */}
-          <DashboardBreakdownsSection
-            topSymbols={dashboardData.topSymbols}
-            topStrategies={dashboardData.topStrategies}
-            direction={dashboardData.direction}
-          />
-
-          {/* Recent Trades & Calendar Preview Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <DashboardRecentTrades trades={dashboardData.recentTrades} />
-            <DashboardCalendarPreview calendar={dashboardData.calendar} />
-          </div>
-
-          {/* Accounts & Journal Preview Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <DashboardAccountsCard accounts={dashboardData.accounts} />
-            <DashboardJournalPreview entries={dashboardData.recentJournalEntries} />
-          </div>
-
-          {/* Quick Actions Shortcuts */}
-          <DashboardQuickActions />
+          {orderedWidgets.map((w) => renderWidget(w.id))}
         </div>
       )}
+
+      {/* 5. Customization Modal */}
+      <DashboardCustomizeModal
+        isOpen={isCustomizeOpen}
+        onClose={() => setIsCustomizeOpen(false)}
+      />
     </div>
   );
 }

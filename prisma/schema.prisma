@@ -36,6 +36,7 @@ model User {
   reviews         Review[]
   notebookNotes   NotebookNote[]
   reviewTemplates ReviewTemplate[]
+  userPreference  UserPreference?
 
   @@index([email])
   @@map("user")
@@ -536,4 +537,55 @@ model ReviewMistake {
 
   @@unique([reviewId, mistakeId])
   @@index([mistakeId])
+}
+
+// ====================
+// SETTINGS & USER PREFERENCES
+// ====================
+
+model UserPreference {
+  id                     String   @id @default(uuid())
+  userId                 String   @unique
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Profile & General
+  displayName            String?
+  timezone               String   @default("UTC")
+  dateFormat             String   @default("YYYY-MM-DD")
+  timeFormat             String   @default("24H")
+  firstDayOfWeek         Int      @default(0) // 0 = Sunday, 1 = Monday
+  defaultLandingPage     String   @default("/dashboard")
+
+  // Trading defaults
+  defaultAccountId       String?
+  defaultTradeSide       String?  // LONG, SHORT, or null
+  defaultRiskPercent     Decimal? @db.Decimal(5, 2)
+  defaultRiskAmount      Decimal? @db.Decimal(18, 2)
+  preferredQuantityUnit  String   @default("lots")
+
+  // Display preferences
+  tableDensity           String   @default("comfortable") // "compact" | "comfortable" | "spacious"
+  decimalPlaces          Int      @default(2)
+  pnlDisplayMode         String   @default("currency") // "currency" | "percentage" | "r_multiple"
+  theme                  String   @default("dark")
+
+  // Dashboard layout configuration (JSON array of widget configs)
+  dashboardLayout        String?
+  defaultDashboardDateRange String @default("ALL")
+
+  // Journal & Reviews
+  defaultJournalView     String   @default("daily")
+  defaultReviewStatus    String   @default("ALL")
+  defaultTemplateId      String?
+
+  // Imports
+  defaultImportTimezone  String   @default("UTC")
+  defaultImportAccountId String?
+  defaultImportRoute     String   @default("/import")
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([userId])
+  @@map("user_preference")
 }
