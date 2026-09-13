@@ -623,9 +623,9 @@ export function SettingsClientPage() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    AI generation is completely on-demand and strictly grounded in canonical trading records.
-                    No private keys or credentials are stored in user preferences. The AI analyst has zero live broker
-                    or trade mutation capabilities.
+                    AI generation is completely on-demand. When an external provider is configured, bounded statistical summaries
+                    and scoped review reflections are analyzed with strict prompt-data isolation (all user content is encapsulated as untrusted data).
+                    Zero private keys are stored in user preferences or client bundles. The AI analyst has zero live broker or trade mutation capabilities.
                   </p>
                 </div>
               </div>
