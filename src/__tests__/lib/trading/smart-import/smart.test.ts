@@ -3,7 +3,6 @@ import { detectSource } from "@/lib/trading/smart-import/source-detection";
 import { parseOcrText } from "@/lib/trading/smart-import/parsing";
 import { normalizeRawCandidate } from "@/lib/trading/smart-import/normalization";
 import { evaluateConfidence } from "@/lib/trading/smart-import/confidence";
-import { NormalizedTradeCandidate } from "@/lib/trading/import/types";
 
 describe("Smart Import Domain", () => {
   describe("Source Detection", () => {
@@ -91,6 +90,8 @@ describe("Smart Import Domain", () => {
         entryPrice: "1.05",
         quantity: "1",
       }, 0);
+      candidate.tradingAccountId = "acc-1";
+      candidate.entryDate = new Date("2023-10-01");
       
       evaluateConfidence(candidate, { quantity: "1" }, 0.9);
       

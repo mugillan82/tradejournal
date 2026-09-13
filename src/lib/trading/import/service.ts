@@ -24,6 +24,7 @@ import { calculateConfidence } from "./confidence";
 import { detectDuplicate } from "./duplicate";
 import { TradeDto, CreateTradeInput } from "@/lib/trading/trade/types";
 import { createTrade, listTrades } from "@/lib/trading/trade/service";
+import { uploadTradeAttachment } from "@/lib/trading/attachment/service";
 import { getTradingAccountById } from "@/lib/trading/account/service";
 import { requireServerUserId } from "@/lib/auth/session";
 import { createAuthRequiredError } from "@/lib/trading/trade/errors";
@@ -171,23 +172,37 @@ export async function buildImportPreview(
   };
 }
 
+export interface ConfirmImportEvidenceItem {
+  fileName: string;
+  mimeType: string;
+  buffer: Buffer;
+}
+
 export interface ConfirmImportResult {
   successful: number;
   failed: number;
   errors: { candidateId: string; error: string }[];
+  trades?: {
+    candidateId: string;
+    tradeId: string;
+    attachmentId?: string;
+  }[];
 }
 
 /**
  * Processes confirmed candidates by re-validating and inserting them via TradeService.
+ * Optionally associates evidence attachments via AttachmentService if provided.
  */
 export async function confirmImport(
-  candidates: NormalizedTradeCandidate[]
+  candidates: NormalizedTradeCandidate[],
+  evidenceMap?: Record<string, ConfirmImportEvidenceItem>
 ): Promise<ConfirmImportResult> {
   await resolveUserId();
 
   let successful = 0;
   let failed = 0;
   const errors: { candidateId: string; error: string }[] = [];
+  const createdTrades: { candidateId: string; tradeId: string; attachmentId?: string }[] = [];
 
   // Group candidates by trading account to re-fetch existing trades efficiently
   const accountIds = Array.from(new Set(candidates.map(c => c.tradingAccountId)));
@@ -297,8 +312,32 @@ export async function confirmImport(
     };
 
     try {
-      await createTrade(createInput);
+      const createdTrade = await createTrade(createInput);
       successful++;
+
+      let attachmentId: string | undefined = undefined;
+      const evidence = evidenceMap?.[candidate.candidateId];
+      if (evidence) {
+        try {
+          const attachment = await uploadTradeAttachment(createdTrade.id, {
+            fileName: evidence.fileName,
+            mimeType: evidence.mimeType,
+            buffer: evidence.buffer,
+          });
+          attachmentId = attachment.id;
+        } catch (attErr) {
+          errors.push({
+            candidateId: candidate.candidateId,
+            error: `Trade created but evidence attachment failed: ${attErr instanceof Error ? attErr.message : "Unknown error"}`,
+          });
+        }
+      }
+
+      createdTrades.push({
+        candidateId: candidate.candidateId,
+        tradeId: createdTrade.id,
+        attachmentId,
+      });
     } catch (err) {
       failed++;
       errors.push({
@@ -308,5 +347,5 @@ export async function confirmImport(
     }
   }
 
-  return { successful, failed, errors };
+  return { successful, failed, errors, trades: createdTrades };
 }

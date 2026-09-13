@@ -2,34 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireServerUserId } from "@/lib/auth/session";
 import { getTradingAccountById } from "@/lib/trading/account/service";
 import { processScreenshot } from "@/lib/trading/smart-import/service";
-import { buildImportPreview } from "@/lib/trading/import/service";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-
-function validateImageSignature(buffer: Buffer): boolean {
-  if (buffer.length < 12) return false;
-
-  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47 &&
-      buffer[4] === 0x0D && buffer[5] === 0x0A && buffer[6] === 0x1A && buffer[7] === 0x0A) {
-    return true;
-  }
-
-  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
-    return true;
-  }
-
-  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
-      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
-    return true;
-  }
-
-  return false;
-}
+import { validateImage } from "@/lib/trading/smart-import/image-validation";
+import { listTrades } from "@/lib/trading/trade/service";
+import { detectDuplicate } from "@/lib/trading/import/duplicate";
+import type { TradeDto } from "@/lib/trading/trade/types";
 
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireServerUserId();
-    
+
     // Parse multipart form data
     const formData = await req.formData();
     const accountId = formData.get("tradingAccountId");
@@ -43,55 +24,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing screenshot file" }, { status: 400 });
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "File exceeds 5MB limit" }, { status: 400 });
-    }
-
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      return NextResponse.json({ error: "Unsupported image format. Use PNG, JPEG, or WebP." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Unsupported image format. Use PNG, JPEG, or WebP." },
+        { status: 400 }
+      );
     }
 
     // Verify account ownership
     const account = await getTradingAccountById(accountId);
     if (!account || account.userId !== userId) {
-      return NextResponse.json({ error: "NOT_FOUND", message: "Account not found or access denied" }, { status: 404 });
+      return NextResponse.json(
+        { error: "NOT_FOUND", message: "Account not found or access denied" },
+        { status: 404 }
+      );
     }
 
     // Read file buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    if (!validateImageSignature(buffer)) {
-      return NextResponse.json({ error: "Invalid file signature. File is not a valid image." }, { status: 400 });
+    // Validate size, magic bytes signature, and explicit dimensions before OCR
+    const imageValidation = validateImage(buffer);
+    if (!imageValidation.isValid) {
+      return NextResponse.json({ error: imageValidation.error }, { status: 400 });
     }
 
     // Process screenshot via Smart Import pipeline
     const result = await processScreenshot(buffer, file.type, account.id);
 
-    // If we extracted no candidates, return early
+    // If no candidates extracted, return early
     if (result.candidates.length === 0) {
-      return NextResponse.json({
-        success: true,
-        sourceDetection: result.sourceDetection,
-        preview: {
-          candidates: [],
-          duplicateCount: 0,
-          errorCount: 0,
-          readyCount: 0,
+      return NextResponse.json(
+        {
+          success: true,
+          sourceDetection: result.sourceDetection,
+          preview: {
+            candidates: [],
+            duplicateCount: 0,
+            errorCount: 0,
+            readyCount: 0,
+          },
         },
-      });
+        { headers: { "Cache-Control": "no-store" } }
+      );
     }
 
-    // Manually run duplicate detection for Smart Import since candidates are already normalized
-    const { listTrades } = await import("@/lib/trading/trade/service");
-    const { detectDuplicate } = await import("@/lib/trading/import/duplicate");
-
+    // Run duplicate detection for Smart Import against existing account trades
     const recentTradesResult = await listTrades({
       filters: { tradingAccountId: account.id },
       pagination: { page: 1, pageSize: 5000 },
-      sort: { field: "entryDate", direction: "desc" }
+      sort: { field: "entryDate", direction: "desc" },
     });
-    const existingTrades = recentTradesResult.items as any[];
+    const existingTrades = recentTradesResult.items as TradeDto[];
 
     let validCount = 0;
     let invalidCount = 0;
@@ -120,16 +105,20 @@ export async function POST(req: NextRequest) {
       readyCount: validCount - exactDupCount,
     };
 
-    return NextResponse.json({
-      success: true,
-      sourceDetection: result.sourceDetection,
-      preview,
-    });
-  } catch (error: any) {
-    console.error("Smart Import Error:", error);
-    if (error.message === "AUTH_REQUIRED") {
+    return NextResponse.json(
+      {
+        success: true,
+        sourceDetection: result.sourceDetection,
+        preview,
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to process screenshot";
+    if (message === "AUTH_REQUIRED") {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
     }
-    return NextResponse.json({ error: "INTERNAL_ERROR", message: "Failed to process screenshot" }, { status: 500 });
+    console.error("Smart Import Error:", error);
+    return NextResponse.json({ error: "INTERNAL_ERROR", message }, { status: 500 });
   }
 }

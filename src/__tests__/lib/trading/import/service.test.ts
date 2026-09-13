@@ -5,6 +5,7 @@ import { buildImportPreview, confirmImport } from "@/lib/trading/import/service"
 import * as tradeService from "@/lib/trading/trade/service";
 import * as authSession from "@/lib/auth/session";
 import * as accountService from "@/lib/trading/account/service";
+import type { TradingAccountDto } from "@/lib/trading/account/types";
 import { TradeDto, TradeSideValue, TradeStatusValue } from "@/lib/trading/trade/types";
 import { NormalizedTradeCandidate, RawRecord } from "@/lib/trading/import/types";
 
@@ -30,7 +31,7 @@ describe("Import Service Hardening", () => {
   describe("buildImportPreview", () => {
     it("fetches scoped trades for duplicate detection based on candidates date range", async () => {
       vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
-      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as any);
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as unknown as TradingAccountDto);
       vi.mocked(tradeService.listTrades).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 5000 });
 
       const records: RawRecord[] = [
@@ -58,7 +59,7 @@ describe("Import Service Hardening", () => {
   describe("confirmImport", () => {
     it("re-runs duplicate detection and fails exact duplicates", async () => {
       vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
-      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as any);
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as unknown as TradingAccountDto);
       
       const existingTrade: Partial<TradeDto> = {
         id: "existing-1",
@@ -100,7 +101,7 @@ describe("Import Service Hardening", () => {
 
     it("re-validates candidates and fails tampered ones", async () => {
       vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
-      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as any);
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as unknown as TradingAccountDto);
       vi.mocked(tradeService.listTrades).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 5000 });
 
       // Client tampered: isValid is true but quantity is missing
@@ -128,7 +129,7 @@ describe("Import Service Hardening", () => {
 
     it("processes valid batch with partial success", async () => {
       vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
-      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as any);
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as unknown as TradingAccountDto);
       vi.mocked(tradeService.listTrades).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 5000 });
 
       // createTrade succeeds for first, fails for second

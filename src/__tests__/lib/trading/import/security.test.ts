@@ -5,6 +5,9 @@ import { buildImportPreview, confirmImport } from "@/lib/trading/import/service"
 import * as accountService from "@/lib/trading/account/service";
 import * as authSession from "@/lib/auth/session";
 import * as tradeService from "@/lib/trading/trade/service";
+import type { TradingAccountDto } from "@/lib/trading/account/types";
+import type { NormalizedTradeCandidate } from "@/lib/trading/import/types";
+import type { TradeDto } from "@/lib/trading/trade/types";
 
 // Mock dependencies
 vi.mock("@/lib/trading/account/service", () => ({
@@ -23,6 +26,8 @@ vi.mock("@/lib/auth/session", () => ({
 describe("Import Security Hardening", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(tradeService.createTrade).mockResolvedValue({ id: "trade-1" } as unknown as TradeDto);
+    vi.mocked(tradeService.listTrades).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 5000 });
   });
 
   describe("Account Authorization", () => {
@@ -53,7 +58,7 @@ describe("Import Security Hardening", () => {
         confidence: { score: 1, level: "HIGH", reasons: [] },
         duplicateMatch: { classification: "NONE", reasons: [] },
         isValid: true,
-      } as any;
+      } as unknown as NormalizedTradeCandidate;
 
       await expect(
         confirmImport([cand])
@@ -64,7 +69,7 @@ describe("Import Security Hardening", () => {
   describe("Same-batch Duplicate Detection", () => {
     it("rejects identical candidates in the same batch", async () => {
       vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
-      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as any);
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as unknown as TradingAccountDto);
       vi.mocked(tradeService.listTrades).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 5000 });
 
       const cand1 = {
@@ -79,7 +84,7 @@ describe("Import Security Hardening", () => {
         confidence: { score: 1, level: "HIGH", reasons: [] },
         duplicateMatch: { classification: "NONE", reasons: [] },
         isValid: true,
-      } as any;
+      } as unknown as NormalizedTradeCandidate;
 
       // Duplicate in the exact same batch
       const cand2 = { ...cand1, candidateId: "cand-2" };
@@ -96,7 +101,7 @@ describe("Import Security Hardening", () => {
   describe("Date-window Scope", () => {
     it("is secure for missing dates since they cannot match exact duplicates", async () => {
       vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
-      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as any);
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as unknown as TradingAccountDto);
       vi.mocked(tradeService.listTrades).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 5000 });
       
       // If date is missing, it skips the date window correctly
@@ -112,7 +117,7 @@ describe("Import Security Hardening", () => {
         confidence: { score: 1, level: "HIGH", reasons: [] },
         duplicateMatch: { classification: "NONE", reasons: [] },
         isValid: true,
-      } as any;
+      } as unknown as NormalizedTradeCandidate;
 
       const result = await confirmImport([cand1]);
       

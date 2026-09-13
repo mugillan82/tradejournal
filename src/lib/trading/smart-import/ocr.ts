@@ -12,6 +12,7 @@ export class TesseractOcrProvider implements OcrProvider {
   }
 
   async readText(imageBuffer: Buffer, mimeType: string): Promise<OcrResult> {
+    void mimeType;
     if (!this.worker) {
       await this.initialize();
     }
