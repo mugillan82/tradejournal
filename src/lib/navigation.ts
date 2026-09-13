@@ -86,7 +86,7 @@ export const navigation: NavSection[] = [
         label: "Smart Import",
         href: "/import/smart",
         icon: Wand2,
-        status: "coming-soon",
+        status: "ready",
       },
       {
         label: "CSV Import",
