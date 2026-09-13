@@ -7,8 +7,8 @@
  * to trader reflection and execution logs.
  */
 
-import { DailyJournalView } from "@/components/journal/daily-journal-view";
+import { NotebookView } from "@/components/journal/notebook-view";
 
 export default function NotebookPage() {
-  return <DailyJournalView />;
+  return <NotebookView />;
 }

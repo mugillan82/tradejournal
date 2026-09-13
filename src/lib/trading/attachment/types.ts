@@ -27,6 +27,8 @@ export interface AttachmentDto {
   readonly id: string;
   readonly tradeId: string | null;
   readonly journalEntryId: string | null;
+  readonly reviewId: string | null;
+  readonly notebookNoteId: string | null;
   readonly fileName: string;
   readonly fileUrl: string;
   readonly fileSize: number | null;
@@ -38,9 +40,13 @@ export interface AttachmentDto {
  * Input contract for creating an attachment record in the service.
  */
 export interface CreateAttachmentInput {
-  readonly tradeId: string;
+  readonly tradeId?: string | null;
+  readonly journalEntryId?: string | null;
+  readonly reviewId?: string | null;
+  readonly notebookNoteId?: string | null;
   readonly fileName: string;
   readonly mimeType: string;
   readonly fileSize: number;
   readonly buffer: Buffer;
 }
+

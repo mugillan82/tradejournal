@@ -27,7 +27,9 @@ describe("TradeNotesSection Component", () => {
       id: "note_1",
       tradeId: TRADE_ID,
       content: "First observation: high volume at key resistance.",
+      phase: "PRE_TRADE" as const,
       createdAt: new Date("2026-03-01T12:00:00Z"),
+      updatedAt: new Date("2026-03-01T12:00:00Z"),
     },
   ];
 
@@ -52,7 +54,9 @@ describe("TradeNotesSection Component", () => {
       id: "note_new",
       tradeId: TRADE_ID,
       content: "Scaled out 50% at 2R.",
+      phase: "MANAGEMENT" as const,
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
     vi.mocked(clientTrades.createTradeNoteClient).mockResolvedValue(newNote);
 
@@ -62,14 +66,14 @@ describe("TradeNotesSection Component", () => {
       expect(screen.getByText("First observation: high volume at key resistance.")).toBeDefined();
     });
 
-    const textarea = screen.getByPlaceholderText(/Add an execution timestamp observation/i);
+    const textarea = screen.getByPlaceholderText(/Add an execution observation/i);
     await user.type(textarea, "Scaled out 50% at 2R.");
 
     const addBtn = screen.getByRole("button", { name: /Add Note/i });
     await user.click(addBtn);
 
     await waitFor(() => {
-      expect(clientTrades.createTradeNoteClient).toHaveBeenCalledWith(TRADE_ID, "Scaled out 50% at 2R.");
+      expect(clientTrades.createTradeNoteClient).toHaveBeenCalledWith(TRADE_ID, "Scaled out 50% at 2R.", "GENERAL");
       expect(screen.getByText("Scaled out 50% at 2R.")).toBeDefined();
     });
   });

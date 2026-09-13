@@ -41,7 +41,14 @@ function formatDate(date: Date): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
-}
+}const PHASE_LABELS: Record<string, { label: string; style: string }> = {
+  PRE_TRADE: { label: "Pre-Trade", style: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
+  ENTRY: { label: "Entry", style: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+  MANAGEMENT: { label: "Management", style: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
+  EXIT: { label: "Exit", style: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+  POST_TRADE: { label: "Reflection", style: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+  GENERAL: { label: "General", style: "bg-slate-800 text-slate-400 border-slate-700" },
+};
 
 export function TradeNotesSection({ tradeId }: TradeNotesSectionProps) {
   const [notes, setNotes] = useState<ReadonlyArray<TradeNoteDto>>([]);
@@ -50,12 +57,14 @@ export function TradeNotesSection({ tradeId }: TradeNotesSectionProps) {
 
   // New Note State
   const [newNoteContent, setNewNoteContent] = useState("");
+  const [newNotePhase, setNewNotePhase] = useState<string>("GENERAL");
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
   // Editing Note State
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
+  const [editingPhase, setEditingPhase] = useState<string>("GENERAL");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Delete Note State
@@ -99,6 +108,7 @@ export function TradeNotesSection({ tradeId }: TradeNotesSectionProps) {
         if (isMounted) setIsLoading(false);
       }
     }
+
     init();
     return () => {
       isMounted = false;
@@ -113,7 +123,7 @@ export function TradeNotesSection({ tradeId }: TradeNotesSectionProps) {
     setAddError(null);
 
     try {
-      const created = await createTradeNoteClient(tradeId, newNoteContent.trim());
+      const created = await createTradeNoteClient(tradeId, newNoteContent.trim(), newNotePhase);
       setNotes((prev) => [created, ...prev]);
       setNewNoteContent("");
     } catch (err: unknown) {
@@ -130,6 +140,7 @@ export function TradeNotesSection({ tradeId }: TradeNotesSectionProps) {
   const startEdit = (note: TradeNoteDto) => {
     setEditingNoteId(note.id);
     setEditingContent(note.content);
+    setEditingPhase(note.phase || "GENERAL");
   };
 
   const cancelEdit = () => {
@@ -142,7 +153,7 @@ export function TradeNotesSection({ tradeId }: TradeNotesSectionProps) {
 
     setIsSavingEdit(true);
     try {
-      const updated = await updateTradeNoteClient(tradeId, noteId, editingContent.trim());
+      const updated = await updateTradeNoteClient(tradeId, noteId, editingContent.trim(), editingPhase);
       setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)));
       setEditingNoteId(null);
     } catch (err: unknown) {
@@ -203,12 +214,31 @@ export function TradeNotesSection({ tradeId }: TradeNotesSectionProps) {
       )}
 
       {/* Add note input form */}
-      <form onSubmit={handleAddNote} className="space-y-2">
+      <form onSubmit={handleAddNote} className="space-y-3">
+        {/* Phase selector pills */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] text-slate-400 mr-1">Phase:</span>
+          {Object.entries(PHASE_LABELS).map(([p, info]) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setNewNotePhase(p)}
+              className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-all ${
+                newNotePhase === p
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
+                  : "bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200"
+              }`}
+            >
+              {info.label}
+            </button>
+          ))}
+        </div>
+
         <div className="relative">
           <textarea
             value={newNoteContent}
             onChange={(e) => setNewNoteContent(e.target.value)}
-            placeholder="Add an execution timestamp observation, market condition note, or mid-trade adjustment..."
+            placeholder="Add an execution observation, entry thesis, management note, or reflection..."
             rows={2}
             className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
           />
@@ -254,7 +284,16 @@ export function TradeNotesSection({ tradeId }: TradeNotesSectionProps) {
                 className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5 space-y-2 hover:border-slate-700/80 transition-colors"
               >
                 <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span className="font-mono">{formatDate(note.createdAt)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono">{formatDate(note.createdAt)}</span>
+                    {note.phase && PHASE_LABELS[note.phase] && (
+                      <span
+                        className={`text-[9px] font-semibold px-1.5 py-0.2 rounded border ${PHASE_LABELS[note.phase].style}`}
+                      >
+                        {PHASE_LABELS[note.phase].label}
+                      </span>
+                    )}
+                  </div>
                   {!isEditing && (
                     <div className="flex items-center gap-1">
                       <button

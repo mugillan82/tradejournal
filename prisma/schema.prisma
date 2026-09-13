@@ -34,6 +34,8 @@ model User {
   trades          Trade[]
   journalEntries  JournalEntry[]
   reviews         Review[]
+  notebookNotes   NotebookNote[]
+  reviewTemplates ReviewTemplate[]
 
   @@index([email])
   @@map("user")
@@ -122,6 +124,12 @@ enum JournalMood {
   VERY_GOOD
 }
 
+enum ReviewStatus {
+  DRAFT
+  IN_REVIEW
+  COMPLETED
+}
+
 // ====================
 // TRADE JOURNAL DOMAIN MODELS
 // ====================
@@ -208,6 +216,7 @@ model Trade {
   tradeNotes  TradeNote[]    @relation("TradeNotes")
   attachments Attachment[]   @relation("TradeAttachments")
   reviewedIn  ReviewTrade[]  @relation("ReviewTrades")
+  journalEntries JournalEntryTrade[]
 
   // Indexes for query performance
   @@index([userId, status])
@@ -246,7 +255,10 @@ model Tag {
   color     String?
   createdAt DateTime @default(now())
 
-  trades TradeTag[] @relation("TradeTags")
+  trades       TradeTag[]        @relation("TradeTags")
+  journalTags  JournalEntryTag[]
+  notebookTags NotebookNoteTag[]
+  reviewTags   ReviewTag[]
 
   @@index([name])
 }
@@ -269,7 +281,9 @@ model Strategy {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  trades Trade[]
+  trades        Trade[]
+  reviews       Review[]
+  notebookNotes NotebookNote[]
 
   @@index([name])
 }
@@ -280,7 +294,9 @@ model Setup {
   description String?
   createdAt   DateTime @default(now())
 
-  trades Trade[]
+  trades        Trade[]
+  reviews       Review[]
+  notebookNotes NotebookNote[]
 
   @@index([name])
 }
@@ -291,7 +307,8 @@ model Mistake {
   description String?
   createdAt   DateTime @default(now())
 
-  trades TradeMistake[] @relation("TradeMistakes")
+  trades         TradeMistake[]  @relation("TradeMistakes")
+  reviewMistakes ReviewMistake[]
 
   @@index([name])
 }
@@ -313,6 +330,10 @@ model Attachment {
   trade          Trade?        @relation("TradeAttachments", fields: [tradeId], references: [id], onDelete: Cascade)
   journalEntryId String?
   journalEntry   JournalEntry? @relation("JournalAttachments", fields: [journalEntryId], references: [id], onDelete: Cascade)
+  reviewId       String?
+  review         Review?       @relation("ReviewAttachments", fields: [reviewId], references: [id], onDelete: Cascade)
+  notebookNoteId String?
+  notebookNote   NotebookNote? @relation("NotebookAttachments", fields: [notebookNoteId], references: [id], onDelete: Cascade)
 
   fileName   String
   fileUrl    String
@@ -320,12 +341,10 @@ model Attachment {
   mimeType   String?
   uploadedAt DateTime @default(now())
 
-  // Application-level invariant: exactly one of (tradeId, journalEntryId) MUST be set.
-  // Cascade deletes ensure orphans cannot exist (parent deletion removes attachments).
-  // Cross-parent validation must be enforced in the application layer since Prisma 5
-  // does not support CHECK constraints.
   @@index([tradeId])
   @@index([journalEntryId])
+  @@index([reviewId])
+  @@index([notebookNoteId])
 }
 
 model TradeNote {
@@ -333,9 +352,12 @@ model TradeNote {
   tradeId   String
   trade     Trade    @relation("TradeNotes", fields: [tradeId], references: [id], onDelete: Cascade)
   content   String
+  phase     String?  // PRE_TRADE, ENTRY, MANAGEMENT, EXIT, POST_TRADE, GENERAL
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@index([tradeId])
+  @@index([tradeId, phase])
 }
 
 model JournalEntry {
@@ -343,7 +365,8 @@ model JournalEntry {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  entryDate DateTime     @unique // one journal entry per calendar day (UTC)
+  entryDate DateTime
+  title     String?
   mood      JournalMood?
   energy    Int?
   focus     Int?
@@ -352,10 +375,87 @@ model JournalEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  attachments Attachment[] @relation("JournalAttachments")
+  attachments Attachment[]        @relation("JournalAttachments")
+  tags        JournalEntryTag[]
+  trades      JournalEntryTrade[]
 
+  @@unique([userId, entryDate])
   @@index([userId])
   @@index([entryDate])
+}
+
+model JournalEntryTag {
+  id             String       @id @default(uuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  tagId          String
+  tag            Tag          @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@unique([journalEntryId, tagId])
+  @@index([tagId])
+}
+
+model JournalEntryTrade {
+  id             String       @id @default(uuid())
+  journalEntryId String
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  tradeId        String
+  trade          Trade        @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@unique([journalEntryId, tradeId])
+  @@index([tradeId])
+}
+
+model NotebookNote {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  content    String
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  strategyId String?
+  strategy   Strategy? @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  setupId    String?
+  setup      Setup?    @relation(fields: [setupId], references: [id], onDelete: SetNull)
+
+  tags        NotebookNoteTag[]
+  attachments Attachment[]      @relation("NotebookAttachments")
+
+  @@index([userId])
+  @@index([userId, isArchived])
+  @@index([createdAt])
+}
+
+model NotebookNoteTag {
+  id     String       @id @default(uuid())
+  noteId String
+  note   NotebookNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag          @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@unique([noteId, tagId])
+  @@index([tagId])
+}
+
+model ReviewTemplate {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  type        String   // PRE_TRADE, POST_TRADE, WEEKLY, CUSTOM
+  prompts     String   // JSON string of structured prompt sections
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reviews Review[]
+
+  @@index([userId])
+  @@index([isDefault])
 }
 
 model Review {
@@ -367,15 +467,39 @@ model Review {
   reviewDate DateTime
   notes      String?
   rating     Int?
+  status     ReviewStatus @default(DRAFT)
+
+  // Structured retrospective analysis
+  thesis               String?
+  whatWentWell         String?
+  whatWentWrong        String?
+  executionQuality     Int?
+  ruleAdherence        Int?
+  riskManagement       Int?
+  emotionalObservation String?
+  lessonsLearned       String?
+  improvementActions   String?
+
+  templateId String?
+  template   ReviewTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  strategyId String?
+  strategy   Strategy? @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  setupId    String?
+  setup      Setup?    @relation(fields: [setupId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  trades ReviewTrade[] @relation("ReviewTrades")
+  trades      ReviewTrade[]   @relation("ReviewTrades")
+  tags        ReviewTag[]
+  mistakes    ReviewMistake[]
+  attachments Attachment[]    @relation("ReviewAttachments")
 
   @@index([userId])
   @@index([reviewDate])
   @@index([userId, reviewDate])
+  @@index([userId, status])
 }
 
 model ReviewTrade {
@@ -383,11 +507,33 @@ model ReviewTrade {
   reviewId String
   review   Review @relation("ReviewTrades", fields: [reviewId], references: [id], onDelete: Cascade)
   tradeId  String
-  trade    Trade  @relation("ReviewTrades", fields: [tradeId], references: [id], onDelete: Restrict)
+  trade    Trade  @relation("ReviewTrades", fields: [tradeId], references: [id], onDelete: Cascade)
 
   notes  String?
   rating Int?
 
   @@unique([reviewId, tradeId])
   @@index([tradeId])
+}
+
+model ReviewTag {
+  id       String @id @default(uuid())
+  reviewId String
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  tagId    String
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@unique([reviewId, tagId])
+  @@index([tagId])
+}
+
+model ReviewMistake {
+  id        String  @id @default(uuid())
+  reviewId  String
+  review    Review  @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  mistakeId String
+  mistake   Mistake @relation(fields: [mistakeId], references: [id], onDelete: Restrict)
+
+  @@unique([reviewId, mistakeId])
+  @@index([mistakeId])
 }

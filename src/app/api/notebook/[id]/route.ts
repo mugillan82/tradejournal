@@ -1,17 +1,19 @@
 /**
- * Trade Notes API — List & Create Route
+ * Individual Notebook Note API Route
  *
- * GET /api/trades/[id]/notes — List notes for a trade
- * POST /api/trades/[id]/notes — Create note for a trade
+ * GET /api/notebook/[id] — Get note by ID
+ * PATCH /api/notebook/[id] — Update note
+ * DELETE /api/notebook/[id] — Delete note
  */
 
 import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
-import { handleJournalApiError } from "@/app/api/journal/handler";
+import { handleJournalApiError } from "../../journal/handler";
 import {
-  listTradeNotes,
-  createTradeNote,
+  getNotebookNoteById,
+  updateNotebookNote,
+  deleteNotebookNote,
 } from "@/lib/trading/journal/service";
 import { requireServerUserId } from "@/lib/auth/session";
 
@@ -42,8 +44,8 @@ export async function GET(
 
   try {
     const { id } = await params;
-    const notes = await listTradeNotes(id);
-    return NextResponse.json(notes, {
+    const note = await getNotebookNoteById(id);
+    return NextResponse.json(note, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {
@@ -51,14 +53,14 @@ export async function GET(
   }
 }
 
-export async function POST(
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } },
 ): Promise<NextResponse<unknown>> {
   const authResponse = await authenticateRequest();
   if (authResponse) return authResponse;
 
-  let body: { content?: string; phase?: Parameters<typeof createTradeNote>[0]["phase"] };
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
@@ -76,13 +78,27 @@ export async function POST(
 
   try {
     const { id } = await params;
-    const note = await createTradeNote({
-      tradeId: id,
-      content: body.content ?? "",
-      phase: body.phase,
-    });
+    const note = await updateNotebookNote(id, body as Parameters<typeof updateNotebookNote>[1]);
     return NextResponse.json(note, {
-      status: 201,
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch (err) {
+    return handleJournalApiError(err);
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> | { id: string } },
+): Promise<NextResponse<unknown>> {
+  const authResponse = await authenticateRequest();
+  if (authResponse) return authResponse;
+
+  try {
+    const { id } = await params;
+    await deleteNotebookNote(id);
+    return new NextResponse(null, {
+      status: 204,
       headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {

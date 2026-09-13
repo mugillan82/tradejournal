@@ -136,8 +136,8 @@ export async function getMonthCalendar(
     tradeWhere.mistakes = { some: { mistakeId: filters.mistakeId } };
   }
 
-  // Fetch trades and journal entries in parallel
-  const [tradeRecords, journalRecords] = await Promise.all([
+  // Fetch trades, journal entries, and reviews in parallel
+  const [tradeRecords, journalRecords, reviewRecords] = await Promise.all([
     prisma.trade.findMany({
       where: tradeWhere,
       include: {
@@ -194,6 +194,17 @@ export async function getMonthCalendar(
       },
       orderBy: { entryDate: "asc" },
     }),
+    prisma.review.findMany({
+      where: {
+        userId,
+        reviewDate: {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        },
+      },
+      select: { id: true, reviewDate: true },
+      orderBy: { reviewDate: "asc" },
+    }),
   ]);
 
   // Build journal lookup map by YYYY-MM-DD
@@ -208,6 +219,15 @@ export async function getMonthCalendar(
       mood: entry.mood,
       notes: entry.notes,
     });
+  }
+
+  // Build reviews lookup map by YYYY-MM-DD
+  const reviewMap = new Map<string, string[]>();
+  for (const r of reviewRecords) {
+    const dStr = formatDateUtc(r.reviewDate);
+    const existing = reviewMap.get(dStr) || [];
+    existing.push(r.id);
+    reviewMap.set(dStr, existing);
   }
 
   // Group trades by date and compute day & month metrics
@@ -334,8 +354,23 @@ export async function getMonthCalendar(
     dayData.trades.push(tradeDto);
   }
 
-  // Also include days that have journal entries even if they have no trades
+  // Also include days that have journal entries or reviews even if they have no trades
   for (const [dateStr] of journalMap.entries()) {
+    if (!dayMap.has(dateStr)) {
+      dayMap.set(dateStr, {
+        tradeCount: 0,
+        winCount: 0,
+        lossCount: 0,
+        breakevenCount: 0,
+        openCount: 0,
+        netPnl: ZERO_DECIMAL,
+        totalR: null,
+        trades: [],
+      });
+    }
+  }
+
+  for (const [dateStr] of reviewMap.entries()) {
     if (!dayMap.has(dateStr)) {
       dayMap.set(dateStr, {
         tradeCount: 0,
@@ -360,6 +395,7 @@ export async function getMonthCalendar(
 
   for (const [dateStr, data] of dayMap.entries()) {
     const journalInfo = journalMap.get(dateStr);
+    const reviewIds = reviewMap.get(dateStr) || [];
     const winRate = data.tradeCount > 0 ? roundRate((data.winCount / data.tradeCount) * 100) : 0;
 
     // Daily winning/losing day stats (only count days with trades)
@@ -393,6 +429,9 @@ export async function getMonthCalendar(
       journalEntryId: journalInfo ? journalInfo.id : null,
       journalMood: journalInfo ? journalInfo.mood : null,
       journalNotes: journalInfo ? journalInfo.notes : null,
+      hasReview: reviewIds.length > 0,
+      reviewCount: reviewIds.length,
+      reviewIds,
       trades: data.trades,
     };
 

@@ -18,6 +18,9 @@ vi.mock("@/lib/db/client", () => ({
     journalEntry: {
       findMany: vi.fn(),
     },
+    review: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -31,6 +34,7 @@ describe("Calendar Domain Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(authSession.requireServerUserId).mockResolvedValue(mockUserId);
+    vi.mocked(prisma.review.findMany).mockResolvedValue([]);
   });
 
   describe("normalizeMonthParam & getMonthDateRange", () => {
@@ -216,6 +220,11 @@ describe("Calendar Domain Service", () => {
         }),
       );
       expect(prisma.journalEntry.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId: mockUserId }),
+        }),
+      );
+      expect(prisma.review.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ userId: mockUserId }),
         }),

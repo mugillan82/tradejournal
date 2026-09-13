@@ -909,13 +909,14 @@ export async function fetchTradeNotes(tradeId: string, signal?: AbortSignal): Pr
 export async function createTradeNoteClient(
   tradeId: string,
   content: string,
+  phase?: string,
   signal?: AbortSignal,
 ): Promise<TradeNoteDto> {
   try {
     const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/notes`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, phase }),
       signal,
     });
 
@@ -938,6 +939,7 @@ export async function createTradeNoteClient(
     return {
       ...data,
       createdAt: new Date(data.createdAt),
+      updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(data.createdAt),
     };
   } catch (err: unknown) {
     if (err instanceof TradeClientApiError) throw err;
@@ -953,6 +955,7 @@ export async function updateTradeNoteClient(
   tradeId: string,
   noteId: string,
   content: string,
+  phase?: string,
   signal?: AbortSignal,
 ): Promise<TradeNoteDto> {
   try {
@@ -961,7 +964,7 @@ export async function updateTradeNoteClient(
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, phase }),
         signal,
       },
     );

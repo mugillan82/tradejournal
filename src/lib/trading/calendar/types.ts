@@ -90,6 +90,9 @@ export interface CalendarDayDto {
   readonly journalEntryId: string | null;
   readonly journalMood: string | null;
   readonly journalNotes: string | null;
+  readonly hasReview?: boolean;
+  readonly reviewCount?: number;
+  readonly reviewIds?: ReadonlyArray<string>;
   readonly trades: ReadonlyArray<CalendarTradeItemDto>;
 }
 

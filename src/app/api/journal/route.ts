@@ -42,6 +42,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<unknown>> 
     const fromDateStr = searchParams.get("fromDate");
     const toDateStr = searchParams.get("toDate");
     const mood = searchParams.get("mood") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const tagId = searchParams.get("tagId") || undefined;
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "50", 10);
 
@@ -50,6 +52,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<unknown>> 
         fromDate: fromDateStr ? new Date(fromDateStr) : undefined,
         toDate: toDateStr ? new Date(toDateStr) : undefined,
         mood: mood as Parameters<typeof listJournalEntries>[0] extends { mood?: infer M } ? M : undefined,
+        search,
+        tagId,
       },
       { page, pageSize },
     );

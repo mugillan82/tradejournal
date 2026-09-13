@@ -1,8 +1,9 @@
 /**
- * Trade Notes API — List & Create Route
+ * Individual Review Template API Route
  *
- * GET /api/trades/[id]/notes — List notes for a trade
- * POST /api/trades/[id]/notes — Create note for a trade
+ * GET /api/review-templates/[id] — Get template
+ * PATCH /api/review-templates/[id] — Update template (user-owned only)
+ * DELETE /api/review-templates/[id] — Delete template (user-owned only)
  */
 
 import "server-only";
@@ -10,8 +11,9 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { handleJournalApiError } from "@/app/api/journal/handler";
 import {
-  listTradeNotes,
-  createTradeNote,
+  getReviewTemplateById,
+  updateReviewTemplate,
+  deleteReviewTemplate,
 } from "@/lib/trading/journal/service";
 import { requireServerUserId } from "@/lib/auth/session";
 
@@ -42,8 +44,8 @@ export async function GET(
 
   try {
     const { id } = await params;
-    const notes = await listTradeNotes(id);
-    return NextResponse.json(notes, {
+    const template = await getReviewTemplateById(id);
+    return NextResponse.json(template, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {
@@ -51,14 +53,14 @@ export async function GET(
   }
 }
 
-export async function POST(
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } },
 ): Promise<NextResponse<unknown>> {
   const authResponse = await authenticateRequest();
   if (authResponse) return authResponse;
 
-  let body: { content?: string; phase?: Parameters<typeof createTradeNote>[0]["phase"] };
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
@@ -76,13 +78,27 @@ export async function POST(
 
   try {
     const { id } = await params;
-    const note = await createTradeNote({
-      tradeId: id,
-      content: body.content ?? "",
-      phase: body.phase,
+    const template = await updateReviewTemplate(id, body as Parameters<typeof updateReviewTemplate>[1]);
+    return NextResponse.json(template, {
+      headers: { "Cache-Control": "no-store" },
     });
-    return NextResponse.json(note, {
-      status: 201,
+  } catch (err) {
+    return handleJournalApiError(err);
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> | { id: string } },
+): Promise<NextResponse<unknown>> {
+  const authResponse = await authenticateRequest();
+  if (authResponse) return authResponse;
+
+  try {
+    const { id } = await params;
+    await deleteReviewTemplate(id);
+    return new NextResponse(null, {
+      status: 204,
       headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {

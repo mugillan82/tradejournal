@@ -154,7 +154,7 @@ export function CalendarDayDetailPanel({
           </div>
 
           <Link
-            href={`/journal`}
+            href={dateStr ? `/daily-journal?date=${dateStr}` : `/daily-journal`}
             className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
           >
             {day?.hasJournalEntry ? "Open Journal →" : "+ Write Journal Entry"}
@@ -181,6 +181,28 @@ export function CalendarDayDetailPanel({
             No journal log recorded for this date. Capture your psychology and market context.
           </p>
         )}
+      </div>
+
+      {/* Trade Reviews Section */}
+      <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-3.5 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300">
+            <span>📋</span>
+            <span>Trade Reviews</span>
+          </div>
+
+          <Link
+            href={dateStr ? `/trade-reviews?date=${dateStr}` : `/trade-reviews`}
+            className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+          >
+            {day?.hasReview ? `View Reviews (${day.reviewCount || 1}) →` : "+ Create Review"}
+          </Link>
+        </div>
+        <p className="text-xs text-slate-400">
+          {day?.hasReview
+            ? `${day.reviewCount || 1} structured retrospective review(s) recorded for this day.`
+            : "No structured reviews recorded for this date."}
+        </p>
       </div>
 
       {/* Trades List */}

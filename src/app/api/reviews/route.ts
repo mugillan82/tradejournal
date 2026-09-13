@@ -13,6 +13,7 @@ import {
   listReviews,
   createReview,
 } from "@/lib/trading/journal/service";
+import type { ReviewStatusValue } from "@/lib/trading/journal/types";
 import { requireServerUserId } from "@/lib/auth/session";
 
 async function authenticateRequest(): Promise<NextResponse<unknown> | null> {
@@ -23,9 +24,8 @@ async function authenticateRequest(): Promise<NextResponse<unknown> | null> {
     return NextResponse.json(
       {
         error: {
-          code: "AUTH_REQUIRED",
-          message: "Authentication required",
-          fieldErrors: [],
+          code: "UNAUTHENTICATED",
+          message: "Authentication is required to access reviews",
         },
       },
       { status: 401, headers: { "Cache-Control": "no-store" } },
@@ -42,6 +42,12 @@ export async function GET(request: NextRequest): Promise<NextResponse<unknown>> 
     const fromDateStr = searchParams.get("fromDate");
     const toDateStr = searchParams.get("toDate");
     const search = searchParams.get("search") || undefined;
+    const status = (searchParams.get("status") as ReviewStatusValue) || undefined;
+    const ratingStr = searchParams.get("rating");
+    const rating = ratingStr ? parseInt(ratingStr, 10) : undefined;
+    const tagId = searchParams.get("tagId") || undefined;
+    const mistakeId = searchParams.get("mistakeId") || undefined;
+    const tradeId = searchParams.get("tradeId") || undefined;
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "50", 10);
 
@@ -50,6 +56,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<unknown>> 
         fromDate: fromDateStr ? new Date(fromDateStr) : undefined,
         toDate: toDateStr ? new Date(toDateStr) : undefined,
         search,
+        status,
+        rating,
+        tagId,
+        mistakeId,
+        tradeId,
       },
       { page, pageSize },
     );

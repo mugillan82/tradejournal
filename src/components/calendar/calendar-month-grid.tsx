@@ -154,6 +154,17 @@ export function CalendarMonthGrid({
                     </span>
                   )}
 
+                  {/* Review Indicator */}
+                  {dayData?.hasReview && (
+                    <span
+                      className="text-[11px] hover:scale-110 transition-transform"
+                      title={`${dayData.reviewCount || 1} review(s) recorded`}
+                      data-testid={`review-indicator-${dateStr}`}
+                    >
+                      📋
+                    </span>
+                  )}
+
                   {/* Best / Worst Day Marker */}
                   {isBestDay && (
                     <span
