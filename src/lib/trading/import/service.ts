@@ -94,11 +94,34 @@ export async function buildImportPreview(
   // Authentication happens inside resolveUserId but we don't need to capture it if we only use it for side-effects
   await resolveUserId();
 
-  // Fetch recent trades for duplicate detection (Optimization: only fetch last 6 months or fetch selectively)
-  // For this foundation, we fetch up to 1000 recent trades for the account.
+  let minDate: Date | null = null;
+  let maxDate: Date | null = null;
+
+  for (const record of records) {
+    const rawDate = normalizeDate(record.data[Object.keys(mapping).find(col => mapping[col] === "entryDate") || ""]);
+    if (rawDate) {
+      if (!minDate || rawDate < minDate) minDate = rawDate;
+      if (!maxDate || rawDate > maxDate) maxDate = rawDate;
+    }
+  }
+
+  // Add a 1-day buffer around the date range
+  const dateFilters: Record<string, Date> = {};
+  if (minDate) {
+    const from = new Date(minDate);
+    from.setDate(from.getDate() - 1);
+    dateFilters.entryDateFrom = from;
+  }
+  if (maxDate) {
+    const to = new Date(maxDate);
+    to.setDate(to.getDate() + 1);
+    dateFilters.entryDateTo = to;
+  }
+
+  // Fetch only relevant trades for duplicate detection to prevent loading all trades
   const recentTradesResult = await listTrades({
-    filters: { tradingAccountId },
-    pagination: { page: 1, pageSize: 1000 },
+    filters: { tradingAccountId, ...dateFilters },
+    pagination: { page: 1, pageSize: 5000 },
     sort: { field: "entryDate", direction: "desc" }
   });
   const existingTrades = recentTradesResult.items as TradeDto[];
@@ -156,23 +179,89 @@ export interface ConfirmImportResult {
 export async function confirmImport(
   candidates: NormalizedTradeCandidate[]
 ): Promise<ConfirmImportResult> {
-  // Authentication is handled inside createTrade implicitly, but we enforce it here as well
   await resolveUserId();
 
   let successful = 0;
   let failed = 0;
   const errors: { candidateId: string; error: string }[] = [];
 
+  // Group candidates by trading account to re-fetch existing trades efficiently
+  const accountIds = Array.from(new Set(candidates.map(c => c.tradingAccountId)));
+  const existingTradesByAccount: Record<string, TradeDto[]> = {};
+
+  for (const accountId of accountIds) {
+    const accountCandidates = candidates.filter(c => c.tradingAccountId === accountId);
+    let minDate: Date | null = null;
+    let maxDate: Date | null = null;
+
+    for (const cand of accountCandidates) {
+      if (cand.entryDate) {
+        const rawDate = new Date(cand.entryDate);
+        if (!minDate || rawDate < minDate) minDate = rawDate;
+        if (!maxDate || rawDate > maxDate) maxDate = rawDate;
+      }
+    }
+
+    const dateFilters: Record<string, Date> = {};
+    if (minDate) {
+      const from = new Date(minDate);
+      from.setDate(from.getDate() - 1);
+      dateFilters.entryDateFrom = from;
+    }
+    if (maxDate) {
+      const to = new Date(maxDate);
+      to.setDate(to.getDate() + 1);
+      dateFilters.entryDateTo = to;
+    }
+
+    const recentTradesResult = await listTrades({
+      filters: { tradingAccountId: accountId, ...dateFilters },
+      pagination: { page: 1, pageSize: 5000 },
+    });
+    existingTradesByAccount[accountId] = recentTradesResult.items as TradeDto[];
+  }
+
   // In a robust implementation, this could use a queue or chunked transactions.
   // For now, we process sequentially using the existing TradeService to preserve all invariants.
-  for (const candidate of candidates) {
+  for (let i = 0; i < candidates.length; i++) {
+    const candidate = candidates[i];
+    // Convert Dates that might be stringified from JSON payload back to Date objects for validation
+    candidate.entryDate = normalizeDate(candidate.entryDate) || undefined;
+    candidate.exitDate = normalizeDate(candidate.exitDate) || undefined;
+    
+    // Normalize numeric inputs to prevent client bypassing validation
+    candidate.entryPrice = normalizeDecimal(candidate.entryPrice) || undefined;
+    candidate.exitPrice = normalizeDecimal(candidate.exitPrice) || undefined;
+    candidate.quantity = normalizeDecimal(candidate.quantity) || undefined;
+    candidate.stopLoss = normalizeDecimal(candidate.stopLoss) || undefined;
+    candidate.takeProfit = normalizeDecimal(candidate.takeProfit) || undefined;
+    candidate.riskAmount = normalizeDecimal(candidate.riskAmount) || undefined;
+    candidate.grossPnl = normalizeDecimal(candidate.grossPnl) || undefined;
+    candidate.netPnl = normalizeDecimal(candidate.netPnl) || undefined;
+    candidate.commission = normalizeDecimal(candidate.commission) || undefined;
+    candidate.fees = normalizeDecimal(candidate.fees) || undefined;
+    candidate.swap = normalizeDecimal(candidate.swap) || undefined;
+
     // Re-validate to ensure client didn't tamper with isValid
     const validated = validateCandidate(candidate);
     if (!validated.isValid) {
       failed++;
       errors.push({ 
         candidateId: candidate.candidateId, 
-        error: "Candidate failed server-side validation." 
+        error: "Candidate failed server-side validation: " + validated.validationIssues.filter(i => i.level === "ERROR").map(i => i.message).join(", ")
+      });
+      continue;
+    }
+
+    // Re-run duplicate detection (CRITICAL SECURITY)
+    const existingTrades = existingTradesByAccount[candidate.tradingAccountId] || [];
+    const duplicateMatch = detectDuplicate(validated, existingTrades);
+    
+    if (duplicateMatch.classification === "EXACT") {
+      failed++;
+      errors.push({
+        candidateId: candidate.candidateId,
+        error: "Candidate is an exact duplicate of an existing trade."
       });
       continue;
     }
