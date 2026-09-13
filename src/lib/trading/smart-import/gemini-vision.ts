@@ -84,6 +84,7 @@ CRITICAL INSTRUCTIONS & TRUST BOUNDARY:
       required: ["source", "sourceConfidence", "trades"],
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const promptParts: any[] = [
       { text: "Extract trading data from this screenshot according to the system instructions and schema." }
     ];
@@ -102,9 +103,10 @@ CRITICAL INSTRUCTIONS & TRUST BOUNDARY:
     });
 
     try {
-      const response = await this.ai.models.generateContent({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const interaction = await (this.ai as any).interactions.create({
         model: "gemini-3.8-flash",
-        contents: promptParts,
+        input: promptParts,
         config: {
           systemInstruction,
           responseMimeType: "application/json",
@@ -112,10 +114,10 @@ CRITICAL INSTRUCTIONS & TRUST BOUNDARY:
           temperature: 0.1, // Low temperature for deterministic extraction
           // Explicitly do not store data if supported by the interactions/REST layer
           store: false,
-        } as any,
+        },
       });
 
-      const responseText = response.text;
+      const responseText = interaction.text;
       if (!responseText) {
         throw new Error("Empty response from Gemini Vision");
       }

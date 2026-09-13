@@ -19,19 +19,19 @@ vi.mock("@google/genai", () => {
 
 describe("GeminiVisionProvider", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockGenerateContent: any;
+  let mockInteractionsCreate: any;
   const originalEnv = process.env;
 
   beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
     
-    mockGenerateContent = vi.fn();
+    mockInteractionsCreate = vi.fn();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (GoogleGenAI as any).mockImplementation(function() {
       return {
-        models: {
-          generateContent: mockGenerateContent,
+        interactions: {
+          create: mockInteractionsCreate,
         },
       };
     });
@@ -57,7 +57,7 @@ describe("GeminiVisionProvider", () => {
     process.env.GEMINI_API_KEY = "test-key";
     const provider = new GeminiVisionProvider();
     
-    mockGenerateContent.mockResolvedValueOnce({
+    mockInteractionsCreate.mockResolvedValueOnce({
       text: JSON.stringify({
         source: "MT4",
         sourceConfidence: 0.9,
@@ -76,20 +76,22 @@ describe("GeminiVisionProvider", () => {
     expect(result.trades[0].entryPrice).toBe("1.1000");
 
     // Verify system prompt is sent with strict boundaries
-    const callArgs = mockGenerateContent.mock.calls[0][0];
+    const callArgs = mockInteractionsCreate.mock.calls[0][0];
+    expect(callArgs.model).toBe("gemini-3.8-flash");
+    expect(callArgs.config.store).toBe(false);
     expect(callArgs.config.systemInstruction).toContain("INJECTION DEFENSE");
     expect(callArgs.config.systemInstruction).toContain("TRUSTED INSTRUCTIONS");
     
     // Verify untrusted data isolation
-    expect(callArgs.contents[1].text).toContain("<untrusted_ocr>");
-    expect(callArgs.contents[1].text).toContain("OCR hints");
+    expect(callArgs.input[1].text).toContain("<untrusted_ocr>");
+    expect(callArgs.input[1].text).toContain("OCR hints");
   });
 
   it("should gracefully handle Gemini vision failures", async () => {
     process.env.GEMINI_API_KEY = "test-key";
     const provider = new GeminiVisionProvider();
     
-    mockGenerateContent.mockRejectedValueOnce(new Error("API Rate Limit Exceeded"));
+    mockInteractionsCreate.mockRejectedValueOnce(new Error("API Rate Limit Exceeded"));
 
     await expect(provider.extractTrades(Buffer.from("dummy"), "image/png")).rejects.toThrow("API Rate Limit Exceeded");
   });
