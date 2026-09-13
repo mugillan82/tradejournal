@@ -106,3 +106,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: errorMessage } }, { status: 500 });
   }
 }
+
+export async function GET() {
+  return NextResponse.json({ error: { message: "Method not allowed" } }, { status: 405, headers: { Allow: "POST" } });
+}
+
+export async function PUT() {
+  return NextResponse.json({ error: { message: "Method not allowed" } }, { status: 405, headers: { Allow: "POST" } });
+}
+
+export async function DELETE() {
+  return NextResponse.json({ error: { message: "Method not allowed" } }, { status: 405, headers: { Allow: "POST" } });
+}

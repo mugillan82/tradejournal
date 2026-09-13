@@ -10,7 +10,10 @@ import { ConfirmImportResult } from "../trading/import/service";
 
 export interface PreviewImportOptions {
   tradingAccountId: string;
-  mapping: ColumnMapping;
+  mapping?: ColumnMapping;
+  sheetName?: string;
+  delimiter?: string;
+  timezone?: string;
 }
 
 export async function createImportPreview(
@@ -21,7 +24,18 @@ export async function createImportPreview(
   const formData = new FormData();
   formData.append("file", file);
   formData.append("tradingAccountId", options.tradingAccountId);
-  formData.append("mapping", JSON.stringify(options.mapping));
+  if (options.mapping) {
+    formData.append("mapping", JSON.stringify(options.mapping));
+  }
+  if (options.sheetName) {
+    formData.append("sheetName", options.sheetName);
+  }
+  if (options.delimiter) {
+    formData.append("delimiter", options.delimiter);
+  }
+  if (options.timezone) {
+    formData.append("timezone", options.timezone);
+  }
 
   const response = await fetch("/api/imports/preview", {
     method: "POST",

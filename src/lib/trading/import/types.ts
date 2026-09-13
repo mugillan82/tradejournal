@@ -98,6 +98,13 @@ export interface ImportPreview {
   duplicateRecords: number; // Exact duplicates
   possibleDuplicates: number;
   candidates: NormalizedTradeCandidate[];
+  headers?: string[];
+  unmappedColumns?: string[];
+  missingRequiredFields?: string[];
+  availableSheets?: string[];
+  selectedSheet?: string;
+  detectedDelimiter?: string;
+  parseErrors?: string[];
 }
 
 export interface ParseResult {

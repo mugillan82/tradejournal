@@ -37,13 +37,26 @@ async function resolveUserId(): Promise<string> {
   }
 }
 
+export interface BuildImportPreviewOptions {
+  headers?: string[];
+  unmappedColumns?: string[];
+  missingRequiredFields?: string[];
+  availableSheets?: string[];
+  selectedSheet?: string;
+  detectedDelimiter?: string;
+  parseErrors?: string[];
+  timezone?: string;
+  previewLimit?: number;
+}
+
 /**
  * Normalizes a raw record using a provided mapping.
  */
 export function normalizeRecord(
   record: RawRecord,
   mapping: ColumnMapping,
-  tradingAccountId: string
+  tradingAccountId: string,
+  options?: { timezone?: string }
 ): NormalizedTradeCandidate {
   // Extract canonical fields from raw data based on mapping
   const extract = (field: CanonicalField): string | undefined => {
@@ -59,8 +72,8 @@ export function normalizeRecord(
     title: normalizeString(extract("symbol")),
     side: normalizeSide(extract("side")) || undefined,
     status: normalizeStatus(extract("status")) || undefined,
-    entryDate: normalizeDate(extract("entryDate")) || undefined,
-    exitDate: normalizeDate(extract("exitDate")),
+    entryDate: normalizeDate(extract("entryDate"), { timezone: options?.timezone }) || undefined,
+    exitDate: normalizeDate(extract("exitDate"), { timezone: options?.timezone }),
     entryPrice: normalizeDecimal(extract("entryPrice")) || undefined,
     exitPrice: normalizeDecimal(extract("exitPrice")),
     quantity: normalizeDecimal(extract("quantity")) || undefined,
@@ -91,7 +104,8 @@ export function normalizeRecord(
 export async function buildImportPreview(
   records: RawRecord[],
   mapping: ColumnMapping,
-  tradingAccountId: string
+  tradingAccountId: string,
+  options?: BuildImportPreviewOptions
 ): Promise<ImportPreview> {
   // Authentication happens inside resolveUserId but we don't need to capture it if we only use it for side-effects
   await resolveUserId();
@@ -103,7 +117,10 @@ export async function buildImportPreview(
   let maxDate: Date | null = null;
 
   for (const record of records) {
-    const rawDate = normalizeDate(record.data[Object.keys(mapping).find(col => mapping[col] === "entryDate") || ""]);
+    const rawDate = normalizeDate(
+      record.data[Object.keys(mapping).find(col => mapping[col] === "entryDate") || ""],
+      { timezone: options?.timezone }
+    );
     if (rawDate) {
       if (!minDate || rawDate < minDate) minDate = rawDate;
       if (!maxDate || rawDate > maxDate) maxDate = rawDate;
@@ -138,7 +155,7 @@ export async function buildImportPreview(
   const candidates: NormalizedTradeCandidate[] = [];
 
   for (const record of records) {
-    let candidate = normalizeRecord(record, mapping, tradingAccountId);
+    let candidate = normalizeRecord(record, mapping, tradingAccountId, { timezone: options?.timezone });
     
     // Validate
     candidate = validateCandidate(candidate);
@@ -162,13 +179,22 @@ export async function buildImportPreview(
     if (duplicateMatch.classification === "POSSIBLE") possibleDupCount++;
   }
 
+  const previewLimit = options?.previewLimit ?? 500;
+
   return {
     totalRecords: records.length,
     validRecords: validCount,
     invalidRecords: invalidCount,
     duplicateRecords: exactDupCount,
     possibleDuplicates: possibleDupCount,
-    candidates,
+    candidates: candidates.slice(0, previewLimit),
+    headers: options?.headers,
+    unmappedColumns: options?.unmappedColumns,
+    missingRequiredFields: options?.missingRequiredFields,
+    availableSheets: options?.availableSheets,
+    selectedSheet: options?.selectedSheet,
+    detectedDelimiter: options?.detectedDelimiter,
+    parseErrors: options?.parseErrors,
   };
 }
 
