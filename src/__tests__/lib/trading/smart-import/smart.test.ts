@@ -46,6 +46,41 @@ describe("Smart Import Domain", () => {
       const normalized = normalizeRawCandidate(raw, 0);
       expect(normalized.title).toBe("TSLA");
     });
+
+    it("parses MT4 history lines explicitly", () => {
+      const text = "12345678 2023.10.01 10:00 buy 0.10 EURUSD 1.0500 1.0400 1.0600 2023.10.01 11:00 1.0550 0.00 0.00 50.00";
+      const parsed = parseOcrText(text, "MT4");
+      expect(parsed).toHaveLength(1);
+      
+      const normalized = normalizeRawCandidate(parsed[0], 0);
+      expect(normalized.side).toBe("LONG");
+      expect(normalized.quantity).toBe("0.10");
+      expect(normalized.title).toBe("EURUSD");
+      expect(normalized.entryPrice).toBe("1.0500");
+      expect(normalized.grossPnl).toBe("50.00");
+    });
+
+    it("parses TradingView order lines explicitly", () => {
+      const text = "AAPL\\nLONG\\nQTY 10\\nAVG FILL 150.50\\nP&L 500.00";
+      const parsed = parseOcrText(text, "TradingView");
+      expect(parsed).toHaveLength(1);
+      
+      const normalized = normalizeRawCandidate(parsed[0], 0);
+      expect(normalized.title).toBe("AAPL");
+      expect(normalized.side).toBe("LONG");
+      expect(normalized.quantity).toBe("10");
+      expect(normalized.entryPrice).toBe("150.50");
+      expect(normalized.grossPnl).toBe("500.00");
+    });
+
+    it("does not directly persist trades to the database", async () => {
+      const parsed = parseOcrText("AAPL LONG 10", "Generic Broker");
+      const normalized = normalizeRawCandidate(parsed[0], 0);
+      expect(normalized).toHaveProperty("candidateId");
+      expect(normalized).toHaveProperty("title", "AAPL");
+      expect(normalized).not.toHaveProperty("id");
+      expect(normalized).not.toHaveProperty("createdAt");
+    });
   });
 
   describe("Confidence & Validation", () => {

@@ -88,4 +88,19 @@ describe("Smart Import Preview API Security", () => {
     
     expect(res.status).toBe(404); // Returns 404 to avoid leaking existence
   });
+  it("rejects invalid magic bytes even if MIME type is correct", async () => {
+    vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
+    vi.mocked(accountService.getTradingAccountById).mockResolvedValue({
+      id: "acc-1",
+      userId: "user-1",
+    } as any);
+    
+    const fakeImageBuffer = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B]);
+    const req = createMockRequest("acc-1", new File([fakeImageBuffer], "test.png", { type: "image/png" }));
+    const res = await POST(req);
+    
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Invalid file signature");
+  });
 });
