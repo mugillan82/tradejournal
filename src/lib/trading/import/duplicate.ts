@@ -13,7 +13,8 @@ import { TradeDto } from "@/lib/trading/trade/types";
 
 export function detectDuplicate(
   candidate: NormalizedTradeCandidate,
-  existingTrades: TradeDto[]
+  existingTrades: TradeDto[],
+  sameBatchCandidates: NormalizedTradeCandidate[] = []
 ): DuplicateMatch {
   if (!candidate.isValid) {
     return { classification: "NONE", reasons: ["Candidate is invalid, skipping duplicate check"] };
@@ -73,6 +74,33 @@ export function detectDuplicate(
           reasons: ["Possible match: same day, symbol, and side, but price/exact time differs."],
         };
       }
+    }
+  }
+
+  // Check against same batch candidates
+  for (const existingCand of sameBatchCandidates) {
+    if (existingCand.tradingAccountId !== candidate.tradingAccountId) continue;
+
+    let dateMatches = false;
+    if (candidate.entryDate && existingCand.entryDate) {
+      const diffTime = Math.abs(candidate.entryDate.getTime() - existingCand.entryDate.getTime());
+      dateMatches = diffTime < 60000;
+    }
+
+    const symbolMatches = !candidate.title || !existingCand.title || candidate.title.toLowerCase() === existingCand.title.toLowerCase();
+    const sideMatches = candidate.side === existingCand.side;
+    
+    let priceMatches = false;
+    if (candidate.entryPrice && existingCand.entryPrice) {
+       priceMatches = candidate.entryPrice === existingCand.entryPrice;
+    }
+
+    if (dateMatches && symbolMatches && sideMatches && priceMatches) {
+      return {
+        classification: "EXACT",
+        existingTradeId: existingCand.candidateId,
+        reasons: ["Exact match with another candidate in the same import batch."],
+      };
     }
   }
 

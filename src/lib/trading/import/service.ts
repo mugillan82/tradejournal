@@ -24,6 +24,7 @@ import { calculateConfidence } from "./confidence";
 import { detectDuplicate } from "./duplicate";
 import { TradeDto, CreateTradeInput } from "@/lib/trading/trade/types";
 import { createTrade, listTrades } from "@/lib/trading/trade/service";
+import { getTradingAccountById } from "@/lib/trading/account/service";
 import { requireServerUserId } from "@/lib/auth/session";
 import { createAuthRequiredError } from "@/lib/trading/trade/errors";
 
@@ -94,6 +95,9 @@ export async function buildImportPreview(
   // Authentication happens inside resolveUserId but we don't need to capture it if we only use it for side-effects
   await resolveUserId();
 
+  // EXPLICIT OWNERSHIP CHECK: Ensure trading account belongs to user before doing any account-scoped actions
+  await getTradingAccountById(tradingAccountId);
+
   let minDate: Date | null = null;
   let maxDate: Date | null = null;
 
@@ -139,7 +143,7 @@ export async function buildImportPreview(
     candidate = validateCandidate(candidate);
 
     // Duplicate detection
-    const duplicateMatch = detectDuplicate(candidate, existingTrades);
+    const duplicateMatch = detectDuplicate(candidate, existingTrades, candidates);
     candidate.duplicateMatch = duplicateMatch;
 
     // Confidence
@@ -190,6 +194,9 @@ export async function confirmImport(
   const existingTradesByAccount: Record<string, TradeDto[]> = {};
 
   for (const accountId of accountIds) {
+    // EXPLICIT OWNERSHIP CHECK: Enforce ownership again at confirmation boundary
+    await getTradingAccountById(accountId);
+
     const accountCandidates = candidates.filter(c => c.tradingAccountId === accountId);
     let minDate: Date | null = null;
     let maxDate: Date | null = null;
@@ -255,7 +262,8 @@ export async function confirmImport(
 
     // Re-run duplicate detection (CRITICAL SECURITY)
     const existingTrades = existingTradesByAccount[candidate.tradingAccountId] || [];
-    const duplicateMatch = detectDuplicate(validated, existingTrades);
+    const sameBatchCandidates = candidates.slice(0, i); // Only candidates processed BEFORE this one in the batch
+    const duplicateMatch = detectDuplicate(validated, existingTrades, sameBatchCandidates);
     
     if (duplicateMatch.classification === "EXACT") {
       failed++;
