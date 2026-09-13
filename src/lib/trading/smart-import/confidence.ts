@@ -54,13 +54,34 @@ export function evaluateConfidence(
 
   // Gemini + OCR cross-check
   if (usedGemini && ocrTextHint) {
-    const ocrClean = ocrTextHint.replace(/\s+/g, "");
-    if (candidate.entryPrice && ocrClean.includes(candidate.entryPrice.replace(/,/g, ""))) {
-      score = Math.min(1.0, score + 0.1);
-      reasons.push("OCR and Gemini Vision agreement on entry price");
-    } else if (candidate.entryPrice) {
-      score -= 0.15;
-      reasons.push("Gemini extraction could not be independently verified by local OCR");
+    const ocrClean = ocrTextHint.replace(/\s+/g, "").toUpperCase();
+    let agreements = 0;
+    let mismatches = 0;
+
+    const checkField = (val: string | undefined | null) => {
+      if (val) {
+        if (ocrClean.includes(val.replace(/[, ]/g, "").toUpperCase())) {
+          agreements++;
+        } else {
+          mismatches++;
+        }
+      }
+    };
+
+    checkField(candidate.entryPrice);
+    checkField(candidate.exitPrice);
+    checkField(candidate.quantity);
+    checkField(candidate.side);
+    checkField(candidate.title); // Symbol
+    checkField(candidate.grossPnl);
+
+    if (agreements > 0) {
+      score = Math.min(1.0, score + (agreements * 0.05));
+      reasons.push(`OCR and Gemini Vision agreement on ${agreements} field(s)`);
+    }
+    if (mismatches > 0) {
+      score -= (mismatches * 0.1);
+      reasons.push(`Gemini extraction could not be independently verified by local OCR for ${mismatches} field(s)`);
     }
   }
 

@@ -18,6 +18,7 @@ vi.mock("@google/genai", () => {
 });
 
 describe("GeminiVisionProvider", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockGenerateContent: any;
   const originalEnv = process.env;
 
@@ -26,6 +27,7 @@ describe("GeminiVisionProvider", () => {
     process.env = { ...originalEnv };
     
     mockGenerateContent = vi.fn();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (GoogleGenAI as any).mockImplementation(function() {
       return {
         models: {
@@ -79,8 +81,8 @@ describe("GeminiVisionProvider", () => {
     expect(callArgs.config.systemInstruction).toContain("TRUSTED INSTRUCTIONS");
     
     // Verify untrusted data isolation
-    expect(callArgs.contents[0].parts[1].text).toContain("<untrusted_ocr>");
-    expect(callArgs.contents[0].parts[1].text).toContain("OCR hints");
+    expect(callArgs.contents[1].text).toContain("<untrusted_ocr>");
+    expect(callArgs.contents[1].text).toContain("OCR hints");
   });
 
   it("should gracefully handle Gemini vision failures", async () => {

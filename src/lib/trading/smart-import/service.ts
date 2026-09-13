@@ -20,6 +20,14 @@ const rateLimitMap = new Map<string, RateLimitBucket>();
 
 function checkVisionRateLimit(userId: string): void {
   const now = Date.now();
+  
+  // Cleanup expired entries to prevent unbounded memory growth
+  if (rateLimitMap.size > 1000) {
+    for (const [key, b] of rateLimitMap.entries()) {
+      if (now > b.resetAt) rateLimitMap.delete(key);
+    }
+  }
+
   const bucket = rateLimitMap.get(userId);
 
   if (!bucket || now > bucket.resetAt) {

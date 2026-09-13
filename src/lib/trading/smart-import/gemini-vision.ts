@@ -84,7 +84,7 @@ CRITICAL INSTRUCTIONS & TRUST BOUNDARY:
       required: ["source", "sourceConfidence", "trades"],
     };
 
-    const promptParts: unknown[] = [
+    const promptParts: any[] = [
       { text: "Extract trading data from this screenshot according to the system instructions and schema." }
     ];
 
@@ -103,14 +103,16 @@ CRITICAL INSTRUCTIONS & TRUST BOUNDARY:
 
     try {
       const response = await this.ai.models.generateContent({
-        model: "gemini-3.1-pro",
-        contents: [{ role: "user", parts: promptParts }],
+        model: "gemini-3.8-flash",
+        contents: promptParts,
         config: {
           systemInstruction,
           responseMimeType: "application/json",
           responseSchema: schema,
           temperature: 0.1, // Low temperature for deterministic extraction
-        },
+          // Explicitly do not store data if supported by the interactions/REST layer
+          store: false,
+        } as any,
       });
 
       const responseText = response.text;
