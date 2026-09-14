@@ -172,9 +172,15 @@ export class Mt5Profile implements TradingScreenshotProfile {
         continue;
       }
 
+      // Pre-normalize space-separated volume decimals in mobile header lines e.g. 'buy 0 60' -> 'buy 0.60'
+      const workingLine = line.replace(
+        /\b(buy|sell|boy|bey|sel|5el|3el)\s+(\d+)\s+(\d{2})\b/i,
+        (_, s, a, b) => `${s} ${a}.${b}`
+      );
+
       // 3. Mobile MT5 trade header card: "NAS100.x, buy 0.09" or "EURUSD.x, sell 0.90"
-      const mobileHeaderMatch = line.match(
-        /^([A-Za-z0-9\.\_\-]+)[,\s]+(buy|sell|boy|bey|sel|5el|3el)\s+(\d+(?:[\.,]\d{1,2})?)(.*)/i
+      const mobileHeaderMatch = workingLine.match(
+        /^([A-Za-z0-9]+(?:[\.,\s]+[A-Za-z0-9]+)?)[,\s]+(buy|sell|boy|bey|sel|5el|3el)\s+([0-9\s\|\.COco]+?)(?:\s+([A-Za-z0-9\(\@\%\#\:\.\-\/].*))?$/i
       );
 
       if (mobileHeaderMatch) {
@@ -182,11 +188,11 @@ export class Mt5Profile implements TradingScreenshotProfile {
         const sideRaw = mobileHeaderMatch[2].toLowerCase();
         const isShort = sideRaw.includes("s") || sideRaw.includes("5") || sideRaw.includes("3");
         currentMobileTrade = {
-          title: mobileHeaderMatch[1].toUpperCase(),
+          title: mobileHeaderMatch[1].toUpperCase().replace(/\s+/g, ""),
           side: isShort ? "SHORT" : "LONG",
-          quantity: mobileHeaderMatch[3],
+          quantity: mobileHeaderMatch[3].trim(),
         };
-        const rest = mobileHeaderMatch[4].trim();
+        const rest = mobileHeaderMatch[4] ? mobileHeaderMatch[4].trim() : "";
         if (rest) {
           const headerDateMatch = rest.match(
             /\b(\d{4}[-./\s]?\d{2}[-./\s]?\d{2}(?:\s+\d{2}[:.]\d{2}(?:[:.]\d{2})?)?|\d{2}[:.]\d{2}(?:[:.]\d{2})?)\b/
@@ -205,12 +211,12 @@ export class Mt5Profile implements TradingScreenshotProfile {
 
       // 4. Within active mobile trade card, check for subsequent fields (supports same-line and multi-line layouts)
       if (currentMobileTrade) {
-        let lineWorking = line;
+        let lineWorking = workingLine;
         let handledField = false;
 
         // Price transition arrow: e.g. "29 201.87 → 29 271.19" or "1.08920 -> 1.08650" or "28 733.87 —~ 28 696.44 26.20"
         const arrowMatch = lineWorking.match(
-          /([0-9\s]+(?:[\.,][0-9]+)?)\s*(?:→|->|–>|-->|~>|»|>|-›|—~|—|–|\s+[-~.]\s+)\s*([0-9\s]+(?:[\.,][0-9]+)?)(.*)/
+          /([0-9\s]+(?:[\.,][0-9]+)?)\s*(?:→|->|–>|-->|~>|»|«|>|<|-›|—~|—|–|\s+[-~.]+\s+|\.\s+|\s{2,})\s*([0-9\s]+(?:[\.,][0-9]+)?)(.*)/
         );
         if (arrowMatch && !currentMobileTrade.entryPrice) {
           currentMobileTrade.entryPrice = arrowMatch[1].replace(/\s+/g, "");

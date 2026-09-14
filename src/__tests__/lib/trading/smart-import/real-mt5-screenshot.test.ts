@@ -36,7 +36,36 @@ describe("Real MT5 Mobile History Screenshot Verification", () => {
       expect(result.sourceDetection.source).toBe("MT5");
       expect(result.sourceDetection.confidence).toBeGreaterThanOrEqual(0.8);
 
-      // 2. Non-Trade Cashflows: Must detect and exclude Balance, Deposit, Withdrawal, Swap, Commission
+      // 1. Exact count assertion: exactly 30 trade candidates
+      expect(result.candidates).toHaveLength(30);
+
+      // 2. Both LONG and SHORT directions exist
+      expect(result.candidates.some((c) => c.side === "LONG")).toBe(true);
+      expect(result.candidates.some((c) => c.side === "SHORT")).toBe(true);
+
+      // 3. Expected symbols exist (NAS100, EURUSD, GBPUSD)
+      expect(result.candidates.some((c) => c.title?.includes("NAS100"))).toBe(true);
+      expect(result.candidates.some((c) => c.title?.includes("EURUSD"))).toBe(true);
+      expect(result.candidates.some((c) => c.title?.includes("GBPUSD"))).toBe(true);
+
+      // 4. Exact expected side sequence for all 30 trade cards
+      const expectedSides: ("LONG" | "SHORT")[] = [
+        "LONG", "LONG", "LONG", "SHORT", "SHORT", "SHORT", "SHORT", "SHORT", "LONG", "LONG",
+        "LONG", "SHORT", "LONG", "LONG", "LONG", "SHORT", "SHORT", "LONG", "LONG", "SHORT",
+        "SHORT", "SHORT", "SHORT", "LONG", "LONG", "LONG", "SHORT", "SHORT", "SHORT", "SHORT"
+      ];
+      expect(result.candidates.map((c) => c.side)).toEqual(expectedSides);
+
+      // 5. Verify prices were extracted without fabrication
+      const closedTrades = result.candidates.filter((c) => c.entryPrice && c.exitPrice);
+      expect(closedTrades.length).toBeGreaterThanOrEqual(25);
+
+      // 6. Account ownership assignment
+      for (const candidate of result.candidates) {
+        expect(candidate.tradingAccountId).toBe("acc-real-mt5-test");
+      }
+
+      // 7. Non-Trade Cashflows: Must detect and exclude Balance, Deposit, Withdrawal, Swap, Commission
       expect(result.nonTradeRows).toBeDefined();
       const nonTradeRows = result.nonTradeRows || [];
       expect(nonTradeRows.length).toBeGreaterThanOrEqual(5);
@@ -47,37 +76,15 @@ describe("Real MT5 Mobile History Screenshot Verification", () => {
       expect(nonTradeTypes).toContain("Commission");
       expect(nonTradeTypes).toContain("Balance");
 
-      // Verify non-trade rows are NOT classified as trade candidates
+      // Zero non-trade rows leaked into trade candidates
       for (const candidate of result.candidates) {
         expect(/balance|deposit|withdrawal|swap|commission/i.test(candidate.title || "")).toBe(false);
       }
 
-      // 3. Genuine Trade Extraction
-      expect(result.candidates.length).toBeGreaterThanOrEqual(10);
-
-      // Verify symbol identification (NAS100 and EURUSD trades extracted)
-      expect(result.candidates.some((c) => c.title?.includes("NAS100"))).toBe(true);
-      expect(result.candidates.some((c) => c.title?.includes("EURUSD"))).toBe(true);
-
-      // Verify side identification (both LONG and SHORT trades present)
-      expect(result.candidates.some((c) => c.side === "LONG")).toBe(true);
-      expect(result.candidates.some((c) => c.side === "SHORT")).toBe(true);
-
-      // Verify entry & exit prices were extracted without fabrication
-      const closedTrades = result.candidates.filter((c) => c.entryPrice && c.exitPrice);
-      expect(closedTrades.length).toBeGreaterThanOrEqual(5);
-
-      // Verify volume extraction
-      expect(result.candidates.some((c) => c.quantity)).toBe(true);
-
-      // Verify account ownership assignment
-      for (const candidate of result.candidates) {
-        expect(candidate.tradingAccountId).toBe("acc-real-mt5-test");
-      }
-
-      // 4. Invariant: Uncertain trades must downgrade status to NEEDS_REVIEW
+      // 8. Invariant: Uncertain trades must downgrade status to NEEDS_REVIEW
       // With real OCR on mobile images, character imperfections on some rows lower confidence or flag validation
-      expect(["SUCCESS", "NEEDS_REVIEW"]).toContain(result.status);
+      expect(result.status).toBe("NEEDS_REVIEW");
+      expect(result.candidates.some((c) => c.confidence.level === "LOW" || !c.isValid)).toBe(true);
 
       console.log(
         `\n[Real MT5 Screenshot Verification Results]\n` +
@@ -87,9 +94,9 @@ describe("Real MT5 Mobile History Screenshot Verification", () => {
         `- Extracted Trade Candidates: ${result.candidates.length}\n` +
         `- Classified Non-Trade Rows: ${nonTradeRows.length} (${nonTradeTypes.join(", ")})\n` +
         `- Terminal Status: ${result.status}\n` +
-        `- First 3 Trade Summaries:\n` +
-        result.candidates.slice(0, 3).map((c, i) =>
-          `  ${i + 1}. ${c.title} | ${c.side} | Qty: ${c.quantity} | Entry: ${c.entryPrice} | Exit: ${c.exitPrice} | Conf: ${c.confidence.level}`
+        `- All 30 Extracted Trades:\n` +
+        result.candidates.map((c, i) =>
+          `  ${i + 1}. ${c.title} | ${c.side} | Qty: ${c.quantity} | Entry: ${c.entryPrice} | Exit: ${c.exitPrice} | PnL: ${c.grossPnl} | Conf: ${c.confidence.level}`
         ).join("\n")
       );
     }
