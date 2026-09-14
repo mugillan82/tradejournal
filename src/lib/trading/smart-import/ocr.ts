@@ -1,4 +1,5 @@
 import { createWorker } from "tesseract.js";
+import sharp from "sharp";
 import { OcrProvider, OcrResult } from "./types";
 
 export const OCR_TIMEOUT_MS = 8000;
@@ -59,8 +60,27 @@ export class TesseractOcrProvider implements OcrProvider {
             return;
           }
 
+          let bufferToProcess = imageBuffer;
+          try {
+            const metadata = await sharp(imageBuffer).metadata();
+            if (metadata.width && metadata.width < 1000) {
+              const targetWidth = Math.min(1600, Math.max(800, metadata.width * 3));
+              bufferToProcess = await sharp(imageBuffer)
+                .resize({ width: targetWidth, kernel: "lanczos3" })
+                .grayscale()
+                .sharpen()
+                .toBuffer();
+            }
+          } catch {
+            bufferToProcess = imageBuffer;
+          }
+
+          if (isSettled || !this.worker) {
+            return;
+          }
+
           // tesseract.js can accept a Buffer directly in Node.js
-          const { data } = await this.worker.recognize(imageBuffer);
+          const { data } = await this.worker.recognize(bufferToProcess);
           if (!isSettled) {
             isSettled = true;
             clearTimeout(timer);

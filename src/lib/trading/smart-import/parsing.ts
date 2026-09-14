@@ -174,19 +174,31 @@ export class Mt5Profile implements TradingScreenshotProfile {
 
       // 3. Mobile MT5 trade header card: "NAS100.x, buy 0.09" or "EURUSD.x, sell 0.90"
       const mobileHeaderMatch = line.match(
-        /^([A-Za-z0-9\.\_\-]+)[,\s]+(buy|sell)\s+([0-9]+(?:[\.,][0-9]+)?)(?:\s+([+-]?\$?[0-9\s]+(?:[\.,][0-9]+)?))?/i
+        /^([A-Za-z0-9\.\_\-]+)[,\s]+(buy|sell|boy|bey|sel|5el|3el)\s+(\d+(?:[\.,]\d{1,2})?)(.*)/i
       );
 
       if (mobileHeaderMatch) {
         commitMobileTrade();
         const sideRaw = mobileHeaderMatch[2].toLowerCase();
+        const isShort = sideRaw.includes("s") || sideRaw.includes("5") || sideRaw.includes("3");
         currentMobileTrade = {
           title: mobileHeaderMatch[1].toUpperCase(),
-          side: sideRaw === "buy" ? "LONG" : "SHORT",
+          side: isShort ? "SHORT" : "LONG",
           quantity: mobileHeaderMatch[3],
         };
-        if (mobileHeaderMatch[4]) {
-          currentMobileTrade.grossPnl = mobileHeaderMatch[4].trim();
+        const rest = mobileHeaderMatch[4].trim();
+        if (rest) {
+          const headerDateMatch = rest.match(
+            /\b(\d{4}[-./\s]?\d{2}[-./\s]?\d{2}(?:\s+\d{2}[:.]\d{2}(?:[:.]\d{2})?)?|\d{2}[:.]\d{2}(?:[:.]\d{2})?)\b/
+          );
+          if (headerDateMatch) {
+            currentMobileTrade.entryDate = headerDateMatch[1].trim();
+          } else {
+            const pnlMatch = rest.match(/^([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?)$/);
+            if (pnlMatch) {
+              currentMobileTrade.grossPnl = pnlMatch[1].trim();
+            }
+          }
         }
         continue;
       }
@@ -196,35 +208,37 @@ export class Mt5Profile implements TradingScreenshotProfile {
         let lineWorking = line;
         let handledField = false;
 
-        // Price transition arrow: e.g. "29 201.87 → 29 271.19" or "1.08920 -> 1.08650"
+        // Price transition arrow: e.g. "29 201.87 → 29 271.19" or "1.08920 -> 1.08650" or "28 733.87 —~ 28 696.44 26.20"
         const arrowMatch = lineWorking.match(
-          /([0-9\s]+(?:[\.,][0-9]+)?)\s*(?:→|->|–>|-->|~>|»|>|-›)\s*([0-9\s]+(?:[\.,][0-9]+)?)/
+          /([0-9\s]+(?:[\.,][0-9]+)?)\s*(?:→|->|–>|-->|~>|»|>|-›|—~|—|–|\s+[-~.]\s+)\s*([0-9\s]+(?:[\.,][0-9]+)?)(.*)/
         );
         if (arrowMatch && !currentMobileTrade.entryPrice) {
           currentMobileTrade.entryPrice = arrowMatch[1].replace(/\s+/g, "");
           currentMobileTrade.exitPrice = arrowMatch[2].replace(/\s+/g, "");
           currentMobileTrade.status = "CLOSED";
           handledField = true;
-          lineWorking = lineWorking.replace(arrowMatch[0], " ");
+          lineWorking = arrowMatch[3] ? arrowMatch[3].trim() : "";
         }
 
         // Timestamp: e.g. "2026.07.09 16:23:09" or "16:23:09"
-        const dateMatch = lineWorking.match(
-          /\b(\d{4}[-./]\d{2}[-./]\d{2}(?:\s+\d{2}:\d{2}(?::\d{2})?)?|\d{2}:\d{2}(?::\d{2})?)\b/
-        );
-        if (dateMatch && !currentMobileTrade.entryDate) {
-          currentMobileTrade.entryDate = dateMatch[1];
-          handledField = true;
-          lineWorking = lineWorking.replace(dateMatch[0], " ");
-        }
+        if (lineWorking) {
+          const dateMatch = lineWorking.match(
+            /\b(\d{4}[-./]\d{2}[-./]\d{2}\s+\d{2}:\d{2}(?::\d{2})?|\d{4}[-./]\d{2}[-./]\d{2}|\d{2}:\d{2}(?::\d{2})?)\b/
+          );
+          if (dateMatch && !currentMobileTrade.entryDate) {
+            currentMobileTrade.entryDate = dateMatch[1];
+            handledField = true;
+            lineWorking = lineWorking.replace(dateMatch[0], " ");
+          }
 
-        // Profit / P&L: e.g. "6.24", "-12.50", "+243.00", "($50.00)"
-        const profitMatch = lineWorking.trim().match(
-          /^(?:profit:?\s*)?([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?|\([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?\))$/i
-        );
-        if (profitMatch && !currentMobileTrade.grossPnl) {
-          currentMobileTrade.grossPnl = profitMatch[1].replace(/\s+/g, "");
-          handledField = true;
+          // Profit / P&L: e.g. "6.24", "-12.50", "+243.00", "($50.00)"
+          const profitMatch = lineWorking.trim().match(
+            /^(?:profit:?\s*)?([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?|\([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?\))$/i
+          );
+          if (profitMatch && !currentMobileTrade.grossPnl) {
+            currentMobileTrade.grossPnl = profitMatch[1].replace(/\s+/g, "");
+            handledField = true;
+          }
         }
 
         if (handledField) {
