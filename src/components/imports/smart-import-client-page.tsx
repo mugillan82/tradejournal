@@ -94,12 +94,18 @@ export function SmartImportClientPage() {
       };
 
       if (!res.ok) {
-        if (res.status === 408 || data.error === "TIMEOUT") {
-          setStatus("TIMEOUT");
-          throw new Error(data.message || "Screenshot processing timed out. Please retry.");
+        const isTimeoutResponse = res.status === 408 || data.error === "TIMEOUT";
+        const customErr = new Error(
+          data.message ||
+            data.error ||
+            (isTimeoutResponse
+              ? "Screenshot processing timed out. Please retry."
+              : "Failed to process screenshot")
+        );
+        if (isTimeoutResponse) {
+          (customErr as Error & { isTimeout?: boolean }).isTimeout = true;
         }
-        setStatus("FAILED");
-        throw new Error(data.message || data.error || "Failed to process screenshot");
+        throw customErr;
       }
 
       if (data.sourceDetection) setSourceDetection(data.sourceDetection);
@@ -114,13 +120,23 @@ export function SmartImportClientPage() {
       }
     } catch (err: unknown) {
       clearTimeout(timeoutId);
-      if (err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"))) {
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === "AbortError" ||
+          err.message.includes("aborted") ||
+          (err as { isTimeout?: boolean }).isTimeout === true);
+
+      if (isTimeout) {
         setStatus("TIMEOUT");
-        setError("Screenshot processing timed out after 15 seconds. Please click 'Retry Extraction' or try a clearer image.");
+        setError(
+          err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"))
+            ? "Screenshot processing timed out after 15 seconds. Please click 'Retry Extraction' or try a clearer image."
+            : err instanceof Error
+            ? err.message
+            : "Screenshot processing timed out. Please retry."
+        );
       } else {
-        if (status !== "TIMEOUT") {
-          setStatus("FAILED");
-        }
+        setStatus("FAILED");
         setError(err instanceof Error ? err.message : "Failed to upload screenshot");
       }
     } finally {

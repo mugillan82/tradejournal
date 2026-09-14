@@ -6,6 +6,7 @@ export const OCR_TIMEOUT_MS = 8000;
 export class TesseractOcrProvider implements OcrProvider {
   private worker: Tesseract.Worker | null = null;
   private initializingPromise: Promise<void> | null = null;
+  private activeSessionId: number = 0;
 
   async initialize(): Promise<void> {
     if (this.worker) return;
@@ -13,11 +14,21 @@ export class TesseractOcrProvider implements OcrProvider {
       return this.initializingPromise;
     }
     
+    const sessionId = ++this.activeSessionId;
+
     this.initializingPromise = (async () => {
       try {
-        this.worker = await createWorker("eng");
+        const workerInstance = await createWorker("eng");
+        if (this.activeSessionId !== sessionId) {
+          // Terminated or invalidated while createWorker was pending; terminate to avoid orphan
+          await workerInstance.terminate().catch(() => {});
+          return;
+        }
+        this.worker = workerInstance;
       } finally {
-        this.initializingPromise = null;
+        if (this.activeSessionId === sessionId) {
+          this.initializingPromise = null;
+        }
       }
     })();
 
@@ -44,8 +55,12 @@ export class TesseractOcrProvider implements OcrProvider {
             await this.initialize();
           }
 
+          if (isSettled || !this.worker) {
+            return;
+          }
+
           // tesseract.js can accept a Buffer directly in Node.js
-          const { data } = await this.worker!.recognize(imageBuffer);
+          const { data } = await this.worker.recognize(imageBuffer);
           if (!isSettled) {
             isSettled = true;
             clearTimeout(timer);
@@ -68,10 +83,11 @@ export class TesseractOcrProvider implements OcrProvider {
   }
 
   async terminate(): Promise<void> {
+    this.activeSessionId++;
+    this.initializingPromise = null;
     if (this.worker) {
       const activeWorker = this.worker;
       this.worker = null;
-      this.initializingPromise = null;
       try {
         await activeWorker.terminate();
       } catch {

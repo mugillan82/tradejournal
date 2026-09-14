@@ -5,7 +5,7 @@ import { Mt5Profile } from "@/lib/trading/smart-import/parsing";
 import { detectSource } from "@/lib/trading/smart-import/source-detection";
 import { normalizeRawCandidate } from "@/lib/trading/smart-import/normalization";
 import { evaluateConfidence } from "@/lib/trading/smart-import/confidence";
-import { PIPELINE_TIMEOUT_MS } from "@/lib/trading/smart-import/service";
+import { processScreenshot, PIPELINE_TIMEOUT_MS } from "@/lib/trading/smart-import/service";
 import { TesseractOcrProvider } from "@/lib/trading/smart-import/ocr";
 
 describe("MT5 Mobile History Screenshot Extraction & Invariants", () => {
@@ -159,25 +159,36 @@ corrupted_unreadable_line
     );
   });
 
-  it("8. proves a hanging processing operation reaches a terminal timeout state within bounded budget", async () => {
+  it("8. exercises the real processScreenshot() pipeline timeout when OCR hangs", async () => {
     vi.useFakeTimers();
 
-    // Create a hanging promise that never resolves on its own
-    const hangingPromise = new Promise(() => {});
+    vi.spyOn(TesseractOcrProvider.prototype, "readText").mockImplementation(
+      () => new Promise(() => {})
+    );
 
-    const withTimeout = async (ms: number) => {
-      return Promise.race([
-        hangingPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT: Bounded timeout reached")), ms)),
-      ]);
-    };
+    let settled = false;
+    const pipelinePromise = processScreenshot(
+      Buffer.from("dummy-image"),
+      "image/png",
+      "acc_test_123",
+      "user_test_123"
+    ).finally(() => {
+      settled = true;
+    });
 
-    const timeoutCheck = withTimeout(PIPELINE_TIMEOUT_MS);
-    vi.advanceTimersByTime(PIPELINE_TIMEOUT_MS + 100);
+    // Advance time to just before timeout: should still be pending
+    vi.advanceTimersByTime(PIPELINE_TIMEOUT_MS - 100);
+    expect(settled).toBe(false);
 
-    await expect(timeoutCheck).rejects.toThrow("TIMEOUT: Bounded timeout reached");
+    // Advance past timeout: rejects with production timeout error
+    vi.advanceTimersByTime(200);
+    await expect(pipelinePromise).rejects.toThrow(
+      `TIMEOUT: Smart Import processing exceeded ${PIPELINE_TIMEOUT_MS}ms budget`
+    );
+    expect(settled).toBe(true);
 
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("9. verifies source detection correctly classifies mobile MT5 history screenshot as MT5", () => {
@@ -185,5 +196,47 @@ corrupted_unreadable_line
     expect(detected.source).toBe("MT5");
     expect(detected.confidence).toBeGreaterThanOrEqual(0.7);
     expect(detected.evidence.some((e) => e.includes("MT5 mobile") || e.includes("arrow"))).toBe(true);
+  });
+
+  it("10. supports both separate-line and same-line MT5 price arrow & timestamp layouts without fabricating timestamps", () => {
+    // Layout A: Separate lines for price arrow and timestamp
+    const separateLinesText = `
+NAS100.x, buy 0.09
+29 201.87 → 29 271.19
+2026.07.09 16:23:09
+12.50
+`;
+    const resA = profile.parseDetailed(separateLinesText);
+    expect(resA.trades).toHaveLength(1);
+    expect(resA.trades[0].entryPrice).toBe("29201.87");
+    expect(resA.trades[0].exitPrice).toBe("29271.19");
+    expect(resA.trades[0].entryDate).toBe("2026.07.09 16:23:09");
+    expect(resA.trades[0].grossPnl).toBe("12.50");
+
+    // Layout B: Same line for price arrow and timestamp
+    const sameLineText = `
+NAS100.x, buy 0.09
+29 201.87 → 29 271.19 2026.07.09 16:23:09
+12.50
+`;
+    const resB = profile.parseDetailed(sameLineText);
+    expect(resB.trades).toHaveLength(1);
+    expect(resB.trades[0].entryPrice).toBe("29201.87");
+    expect(resB.trades[0].exitPrice).toBe("29271.19");
+    expect(resB.trades[0].entryDate).toBe("2026.07.09 16:23:09");
+    expect(resB.trades[0].grossPnl).toBe("12.50");
+
+    // Layout C: Missing timestamp - must NOT fabricate a timestamp
+    const missingTimestampText = `
+NAS100.x, buy 0.09
+29 201.87 → 29 271.19
+12.50
+`;
+    const resC = profile.parseDetailed(missingTimestampText);
+    expect(resC.trades).toHaveLength(1);
+    expect(resC.trades[0].entryPrice).toBe("29201.87");
+    expect(resC.trades[0].exitPrice).toBe("29271.19");
+    expect(resC.trades[0].entryDate).toBeUndefined();
+    expect(resC.trades[0].grossPnl).toBe("12.50");
   });
 });

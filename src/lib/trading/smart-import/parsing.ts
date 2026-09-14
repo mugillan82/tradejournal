@@ -191,34 +191,43 @@ export class Mt5Profile implements TradingScreenshotProfile {
         continue;
       }
 
-      // 4. Within active mobile trade card, check for subsequent fields
+      // 4. Within active mobile trade card, check for subsequent fields (supports same-line and multi-line layouts)
       if (currentMobileTrade) {
+        let lineWorking = line;
+        let handledField = false;
+
         // Price transition arrow: e.g. "29 201.87 → 29 271.19" or "1.08920 -> 1.08650"
-        const arrowMatch = line.match(
+        const arrowMatch = lineWorking.match(
           /([0-9\s]+(?:[\.,][0-9]+)?)\s*(?:→|->|–>|-->|~>|»|>|-›)\s*([0-9\s]+(?:[\.,][0-9]+)?)/
         );
         if (arrowMatch && !currentMobileTrade.entryPrice) {
           currentMobileTrade.entryPrice = arrowMatch[1].replace(/\s+/g, "");
           currentMobileTrade.exitPrice = arrowMatch[2].replace(/\s+/g, "");
           currentMobileTrade.status = "CLOSED";
-          continue;
+          handledField = true;
+          lineWorking = lineWorking.replace(arrowMatch[0], " ");
         }
 
-        // Timestamp: e.g. "2024.03.15 14:32:05" or "14:32:05"
-        const dateMatch = line.match(
+        // Timestamp: e.g. "2026.07.09 16:23:09" or "16:23:09"
+        const dateMatch = lineWorking.match(
           /\b(\d{4}[-./]\d{2}[-./]\d{2}(?:\s+\d{2}:\d{2}(?::\d{2})?)?|\d{2}:\d{2}(?::\d{2})?)\b/
         );
         if (dateMatch && !currentMobileTrade.entryDate) {
           currentMobileTrade.entryDate = dateMatch[1];
-          continue;
+          handledField = true;
+          lineWorking = lineWorking.replace(dateMatch[0], " ");
         }
 
         // Profit / P&L: e.g. "6.24", "-12.50", "+243.00", "($50.00)"
-        const profitMatch = line.match(
+        const profitMatch = lineWorking.trim().match(
           /^(?:profit:?\s*)?([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?|\([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?\))$/i
         );
         if (profitMatch && !currentMobileTrade.grossPnl) {
           currentMobileTrade.grossPnl = profitMatch[1].replace(/\s+/g, "");
+          handledField = true;
+        }
+
+        if (handledField) {
           continue;
         }
       }
