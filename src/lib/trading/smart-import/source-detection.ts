@@ -37,7 +37,7 @@ export function detectSource(ocrText: string): SourceDetectionResult {
     scores.TradingView.evidence.push("Explicit TradingView branding detected");
   }
 
-  // MT5 Specific Vocabulary (Deals, Position Direction, Orders)
+  // MT5 Specific Vocabulary (Deals, Position Direction, Orders, Mobile History)
   if (normalized.includes("deal") || normalized.includes("deals")) {
     scores.MT5.score += 25;
     scores.MT5.evidence.push("MT5 'deal/deals' keyword found");
@@ -45,6 +45,28 @@ export function detectSource(ocrText: string): SourceDetectionResult {
   if (normalized.match(/\b(in\/out|inout|\bin\b|\bout\b)\s+(deal|volume|price)/)) {
     scores.MT5.score += 20;
     scores.MT5.evidence.push("MT5 deal direction (in/out) pattern detected");
+  }
+
+  // MT5 Mobile History Pattern: Arrow between prices e.g. "29 201.87 → 29 271.19" or "1.0850 -> 1.0890"
+  if (/[0-9]\s*(?:→|->|–>|-->|~>|»)\s*[0-9]/.test(normalized)) {
+    scores.MT5.score += 45;
+    scores.MT5.evidence.push("MT5 mobile open-to-close price transition arrow detected");
+  }
+
+  // MT5 Mobile Symbol & Side pattern e.g. "NAS100.x, buy 0.09" or "EURUSD.x, sell 0.90"
+  if (/[a-z0-9\._\-]+,\s*(?:buy|sell)\s+[0-9]/i.test(ocrText)) {
+    scores.MT5.score += 40;
+    scores.MT5.evidence.push("MT5 mobile '[symbol], buy/sell [volume]' card pattern detected");
+  }
+
+  // MT5 Account History Cashflow Items (Balance, Deposit, Withdrawal, Swap)
+  if (
+    normalized.includes("deposit") ||
+    normalized.includes("withdrawal") ||
+    (normalized.includes("balance") && (normalized.includes("history") || normalized.includes("profit") || normalized.includes("swap")))
+  ) {
+    scores.MT5.score += 20;
+    scores.MT5.evidence.push("MT5 account history cashflow/balance items detected");
   }
 
   // MT4 / MT5 Common Indicators

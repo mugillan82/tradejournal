@@ -16,7 +16,11 @@ interface ImportPreview {
   duplicateCount: number;
   errorCount: number;
   readyCount: number;
+  nonTradeCount?: number;
+  excludedRows?: { type: string; rawText: string }[];
 }
+
+export type ImportStatus = "IDLE" | "PROCESSING" | "SUCCESS" | "NEEDS_REVIEW" | "FAILED" | "TIMEOUT";
 
 export function SmartImportClientPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -24,6 +28,7 @@ export function SmartImportClientPage() {
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [status, setStatus] = useState<ImportStatus>("IDLE");
   const [error, setError] = useState("");
 
   const [sourceDetection, setSourceDetection] = useState<SourceDetectionResult | null>(null);
@@ -46,6 +51,7 @@ export function SmartImportClientPage() {
       setSourceDetection(null);
       setImportResult(null);
       setError("");
+      setStatus("IDLE");
     }
   };
 
@@ -57,29 +63,66 @@ export function SmartImportClientPage() {
     }
 
     setIsLoading(true);
+    setStatus("PROCESSING");
     setError("");
 
     const formData = new FormData();
     formData.append("screenshot", file);
     formData.append("tradingAccountId", selectedAccountId);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 15000); // 15-second client-side timeout
+
     try {
       const res = await fetch("/api/imports/smart/preview", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
       const data = (await res.json()) as {
+        success?: boolean;
+        status?: "SUCCESS" | "NEEDS_REVIEW";
         error?: string;
+        message?: string;
         sourceDetection?: SourceDetectionResult;
         preview?: ImportPreview;
       };
-      if (!res.ok) throw new Error(data.error || "Failed to process screenshot");
+
+      if (!res.ok) {
+        if (res.status === 408 || data.error === "TIMEOUT") {
+          setStatus("TIMEOUT");
+          throw new Error(data.message || "Screenshot processing timed out. Please retry.");
+        }
+        setStatus("FAILED");
+        throw new Error(data.message || data.error || "Failed to process screenshot");
+      }
 
       if (data.sourceDetection) setSourceDetection(data.sourceDetection);
-      if (data.preview) setPreview(data.preview);
+      if (data.preview) {
+        setPreview(data.preview);
+        const resolvedStatus =
+          data.status ||
+          (data.preview.errorCount > 0 || data.preview.candidates.length === 0 ? "NEEDS_REVIEW" : "SUCCESS");
+        setStatus(resolvedStatus);
+      } else {
+        setStatus("FAILED");
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to upload screenshot");
+      clearTimeout(timeoutId);
+      if (err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"))) {
+        setStatus("TIMEOUT");
+        setError("Screenshot processing timed out after 15 seconds. Please click 'Retry Extraction' or try a clearer image.");
+      } else {
+        if (status !== "TIMEOUT") {
+          setStatus("FAILED");
+        }
+        setError(err instanceof Error ? err.message : "Failed to upload screenshot");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -147,11 +190,22 @@ export function SmartImportClientPage() {
             </div>
 
             {error && (
-              <Alert variant="error">
-                <AlertCircle className="h-4 w-4" />
-                <div className="font-semibold mb-1">Error</div>
-                <div className="text-sm">{error}</div>
-              </Alert>
+              <div className="space-y-3">
+                <Alert variant="error">
+                  <AlertCircle className="h-4 w-4" />
+                  <div className="font-semibold mb-1">
+                    {status === "TIMEOUT" ? "Extraction Timed Out" : "Extraction Failed"}
+                  </div>
+                  <div className="text-sm">{error}</div>
+                </Alert>
+                {(status === "FAILED" || status === "TIMEOUT") && (
+                  <div className="flex gap-2">
+                    <Button variant="secondary" onClick={handleUpload} disabled={!file || isLoading}>
+                      Retry Extraction
+                    </Button>
+                  </div>
+                )}
+              </div>
             )}
 
             <Button onClick={handleUpload} disabled={!file || isLoading}>
@@ -176,6 +230,16 @@ export function SmartImportClientPage() {
 
       {preview && !importResult && (
         <div className="space-y-4">
+          {status === "NEEDS_REVIEW" && (
+            <Alert variant="warning">
+              <AlertCircle className="h-4 w-4" />
+              <div className="font-semibold mb-1">Manual Review Required</div>
+              <div className="text-sm">
+                Some trade rows or values require manual verification. Please inspect flagged entries before confirming.
+              </div>
+            </Alert>
+          )}
+
           <div className="flex gap-4 mb-4">
             <div className="p-4 rounded border bg-card flex-1">
               <div className="text-sm text-muted-foreground">Ready to Import</div>
@@ -189,6 +253,12 @@ export function SmartImportClientPage() {
               <div className="text-sm text-muted-foreground">Errors</div>
               <div className="text-2xl font-bold text-red-500">{preview.errorCount}</div>
             </div>
+            {typeof preview.nonTradeCount === "number" && preview.nonTradeCount > 0 && (
+              <div className="p-4 rounded border bg-card flex-1">
+                <div className="text-sm text-muted-foreground">Non-Trades Excluded</div>
+                <div className="text-2xl font-bold text-slate-400">{preview.nonTradeCount}</div>
+              </div>
+            )}
           </div>
 
           <div className="rounded-md border">
@@ -244,6 +314,15 @@ export function SmartImportClientPage() {
               </tbody>
             </table>
           </div>
+
+          {preview.excludedRows && preview.excludedRows.length > 0 && (
+            <div className="p-3 rounded-lg border bg-muted/40 text-xs text-muted-foreground flex flex-col gap-1">
+              <span className="font-semibold text-foreground">Excluded non-trade rows:</span>
+              <span className="leading-relaxed">
+                {preview.excludedRows.map((r) => `${r.type}: "${r.rawText}"`).join(" • ")}
+              </span>
+            </div>
+          )}
 
           {error && (
             <Alert variant="error">

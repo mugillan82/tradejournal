@@ -58,12 +58,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: true,
+          status: result.status || "NEEDS_REVIEW",
           sourceDetection: result.sourceDetection,
           preview: {
             candidates: [],
             duplicateCount: 0,
             errorCount: 0,
             readyCount: 0,
+            nonTradeCount: result.nonTradeRows?.length || 0,
+            excludedRows: result.nonTradeRows || [],
           },
         },
         { headers: { "Cache-Control": "no-store" } }
@@ -103,11 +106,14 @@ export async function POST(req: NextRequest) {
       duplicateCount: exactDupCount + possibleDupCount,
       errorCount: invalidCount,
       readyCount: validCount - exactDupCount,
+      nonTradeCount: result.nonTradeRows?.length || 0,
+      excludedRows: result.nonTradeRows || [],
     };
 
     return NextResponse.json(
       {
         success: true,
+        status: result.status,
         sourceDetection: result.sourceDetection,
         preview,
       },
@@ -117,6 +123,15 @@ export async function POST(req: NextRequest) {
     const message = error instanceof Error ? error.message : "Failed to process screenshot";
     if (message === "AUTH_REQUIRED") {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+    if (message.startsWith("TIMEOUT") || message.toLowerCase().includes("timed out")) {
+      return NextResponse.json(
+        {
+          error: "TIMEOUT",
+          message: "Screenshot processing timed out. Please ensure the image is clear and try again.",
+        },
+        { status: 408 }
+      );
     }
     console.error("Smart Import Error:", error);
     return NextResponse.json({ error: "INTERNAL_ERROR", message }, { status: 500 });

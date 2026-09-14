@@ -1,4 +1,4 @@
-import { PlatformSource, TradingScreenshotProfile } from "./types";
+import { NonTradeRow, PlatformSource, ProfileParseResult, TradingScreenshotProfile } from "./types";
 
 /**
  * Splits text safely supporting real CRLF/LF newlines as well as escaped newlines.
@@ -118,80 +118,188 @@ export class Mt5Profile implements TradingScreenshotProfile {
   source: PlatformSource = "MT5";
 
   parse(text: string): Partial<Record<string, string>>[] {
+    return this.parseDetailed(text).trades;
+  }
+
+  parseDetailed(text: string): ProfileParseResult {
     const lines = splitLines(text);
-    const candidates: Partial<Record<string, string>>[] = [];
+    const trades: Partial<Record<string, string>>[] = [];
+    const nonTradeRows: NonTradeRow[] = [];
 
-    for (const line of lines) {
-      const lower = line.toLowerCase();
-      if (!lower.includes("buy") && !lower.includes("sell")) continue;
+    const checkNonTrade = (line: string): NonTradeRow | null => {
+      const trimmed = line.trim();
+      if (/^balance\b/i.test(trimmed)) return { type: "Balance", rawText: trimmed };
+      if (/^deposit\b/i.test(trimmed)) return { type: "Deposit", rawText: trimmed };
+      if (/^withdrawal\b/i.test(trimmed)) return { type: "Withdrawal", rawText: trimmed };
+      if (/^swap\b/i.test(trimmed)) return { type: "Swap", rawText: trimmed };
+      if (/^commission\b/i.test(trimmed)) return { type: "Commission", rawText: trimmed };
+      if (/^(?:credit|equity|margin|free margin)\b/i.test(trimmed)) return { type: "Other", rawText: trimmed };
+      return null;
+    };
 
-      const tokens = line.split(/\s+/);
-      const sideIndex = tokens.findIndex((t) => t.toLowerCase() === "buy" || t.toLowerCase() === "sell");
-      if (sideIndex === -1) continue;
+    let currentMobileTrade: Partial<Record<string, string>> | null = null;
 
-      const sideRaw = tokens[sideIndex].toLowerCase();
-      const side = sideRaw === "buy" ? "LONG" : "SHORT";
+    const commitMobileTrade = () => {
+      if (currentMobileTrade) {
+        trades.push(currentMobileTrade);
+        currentMobileTrade = null;
+      }
+    };
 
-      const candidate: Partial<Record<string, string>> = { side };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
 
-      // Deal/Order Ticket
-      if (sideIndex >= 3 && /^\d+$/.test(tokens[0].replace("#", ""))) {
-        candidate.externalReference = tokens[0].replace("#", "");
+      // 1. Non-trade classification (Balance, Deposit, Withdrawal, Swap, Commission)
+      const nonTrade = checkNonTrade(line);
+      if (nonTrade) {
+        commitMobileTrade();
+        nonTradeRows.push(nonTrade);
+        continue;
       }
 
-      // MT5 Time (Date + Time)
-      if (sideIndex >= 2) {
-        candidate.entryDate = `${tokens[sideIndex - 2]} ${tokens[sideIndex - 1]}`;
-      } else if (sideIndex >= 1) {
-        candidate.entryDate = tokens[sideIndex - 1];
+      // 2. Desktop MT5 deal/order table format check
+      const isDesktopMt5 =
+        /\b(?:in|out|inout)\b/i.test(line) ||
+        /\b(?:commission|profit):\s*-?\d/i.test(line) ||
+        (/^#?\d+\s+\d{4}[-./]\d{2}/.test(line) && /\b(?:buy|sell)\b/i.test(line));
+
+      if (isDesktopMt5) {
+        commitMobileTrade();
+        const desktopTrade = this.parseDesktopLine(line);
+        if (desktopTrade) {
+          trades.push(desktopTrade);
+        }
+        continue;
       }
 
-      // Check for MT5 Direction token ("in", "out", "inout") following buy/sell
-      let offset = sideIndex + 1;
-      if (offset < tokens.length && ["in", "out", "inout"].includes(tokens[offset].toLowerCase())) {
-        offset++;
+      // 3. Mobile MT5 trade header card: "NAS100.x, buy 0.09" or "EURUSD.x, sell 0.90"
+      const mobileHeaderMatch = line.match(
+        /^([A-Za-z0-9\.\_\-]+)[,\s]+(buy|sell)\s+([0-9]+(?:[\.,][0-9]+)?)(?:\s+([+-]?\$?[0-9\s]+(?:[\.,][0-9]+)?))?/i
+      );
+
+      if (mobileHeaderMatch) {
+        commitMobileTrade();
+        const sideRaw = mobileHeaderMatch[2].toLowerCase();
+        currentMobileTrade = {
+          title: mobileHeaderMatch[1].toUpperCase(),
+          side: sideRaw === "buy" ? "LONG" : "SHORT",
+          quantity: mobileHeaderMatch[3],
+        };
+        if (mobileHeaderMatch[4]) {
+          currentMobileTrade.grossPnl = mobileHeaderMatch[4].trim();
+        }
+        continue;
       }
 
-      // Volume / Quantity
-      if (offset < tokens.length && /^\d+\.?\d*$/.test(tokens[offset])) {
-        candidate.quantity = tokens[offset];
-        offset++;
-      }
+      // 4. Within active mobile trade card, check for subsequent fields
+      if (currentMobileTrade) {
+        // Price transition arrow: e.g. "29 201.87 → 29 271.19" or "1.08920 -> 1.08650"
+        const arrowMatch = line.match(
+          /([0-9\s]+(?:[\.,][0-9]+)?)\s*(?:→|->|–>|-->|~>|»|>|-›)\s*([0-9\s]+(?:[\.,][0-9]+)?)/
+        );
+        if (arrowMatch && !currentMobileTrade.entryPrice) {
+          currentMobileTrade.entryPrice = arrowMatch[1].replace(/\s+/g, "");
+          currentMobileTrade.exitPrice = arrowMatch[2].replace(/\s+/g, "");
+          currentMobileTrade.status = "CLOSED";
+          continue;
+        }
 
-      // Symbol
-      if (offset < tokens.length && /^[A-Z0-9\.\_\-]+$/i.test(tokens[offset])) {
-        candidate.title = tokens[offset].toUpperCase();
-        offset++;
-      }
+        // Timestamp: e.g. "2024.03.15 14:32:05" or "14:32:05"
+        const dateMatch = line.match(
+          /\b(\d{4}[-./]\d{2}[-./]\d{2}(?:\s+\d{2}:\d{2}(?::\d{2})?)?|\d{2}:\d{2}(?::\d{2})?)\b/
+        );
+        if (dateMatch && !currentMobileTrade.entryDate) {
+          currentMobileTrade.entryDate = dateMatch[1];
+          continue;
+        }
 
-      // Price
-      if (offset < tokens.length && /^\d+\.?\d*$/.test(tokens[offset])) {
-        candidate.entryPrice = tokens[offset];
-        offset++;
-      }
-
-      // Optional explicit keywords in MT5: "Commission: -2.50 Swap: -1.00 Profit: 150.00"
-      const commMatch = line.match(/commission:?\s*(-?\d+[\.,]?\d*)/i);
-      if (commMatch) candidate.commission = commMatch[1];
-
-      const swapMatch = line.match(/swap:?\s*(-?\d+[\.,]?\d*)/i);
-      if (swapMatch) candidate.swap = swapMatch[1];
-
-      const profitMatch = line.match(/(?:profit|pnl):?\s*(-?\$?\d+[\.,]?\d*)/i);
-      if (profitMatch) {
-        candidate.grossPnl = profitMatch[1];
-      } else if (tokens.length > offset) {
-        // Fallback to last token if numbers are columnated
-        const lastToken = tokens[tokens.length - 1];
-        if (/^-?\$?\d+[\.,]?\d*$/.test(lastToken.replace(/[()]/g, ""))) {
-          candidate.grossPnl = lastToken;
+        // Profit / P&L: e.g. "6.24", "-12.50", "+243.00", "($50.00)"
+        const profitMatch = line.match(
+          /^(?:profit:?\s*)?([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?|\([+-]?\$?€?£?[0-9\s]+(?:[\.,][0-9]+)?\))$/i
+        );
+        if (profitMatch && !currentMobileTrade.grossPnl) {
+          currentMobileTrade.grossPnl = profitMatch[1].replace(/\s+/g, "");
+          continue;
         }
       }
-
-      candidates.push(candidate);
     }
 
-    return candidates;
+    commitMobileTrade();
+
+    return {
+      trades,
+      nonTradeRows,
+    };
+  }
+
+  private parseDesktopLine(line: string): Partial<Record<string, string>> | null {
+    const lower = line.toLowerCase();
+    if (!lower.includes("buy") && !lower.includes("sell")) return null;
+
+    const tokens = line.split(/\s+/);
+    const sideIndex = tokens.findIndex((t) => t.toLowerCase() === "buy" || t.toLowerCase() === "sell");
+    if (sideIndex === -1) return null;
+
+    const sideRaw = tokens[sideIndex].toLowerCase();
+    const side = sideRaw === "buy" ? "LONG" : "SHORT";
+
+    const candidate: Partial<Record<string, string>> = { side };
+
+    // Deal/Order Ticket
+    if (sideIndex >= 3 && /^\d+$/.test(tokens[0].replace("#", ""))) {
+      candidate.externalReference = tokens[0].replace("#", "");
+    }
+
+    // MT5 Time (Date + Time)
+    if (sideIndex >= 2) {
+      candidate.entryDate = `${tokens[sideIndex - 2]} ${tokens[sideIndex - 1]}`;
+    } else if (sideIndex >= 1) {
+      candidate.entryDate = tokens[sideIndex - 1];
+    }
+
+    // Check for MT5 Direction token ("in", "out", "inout") following buy/sell
+    let offset = sideIndex + 1;
+    if (offset < tokens.length && ["in", "out", "inout"].includes(tokens[offset].toLowerCase())) {
+      offset++;
+    }
+
+    // Volume / Quantity
+    if (offset < tokens.length && /^\d+\.?\d*$/.test(tokens[offset])) {
+      candidate.quantity = tokens[offset];
+      offset++;
+    }
+
+    // Symbol
+    if (offset < tokens.length && /^[A-Z0-9\.\_\-]+$/i.test(tokens[offset])) {
+      candidate.title = tokens[offset].toUpperCase();
+      offset++;
+    }
+
+    // Price
+    if (offset < tokens.length && /^\d+\.?\d*$/.test(tokens[offset])) {
+      candidate.entryPrice = tokens[offset];
+      offset++;
+    }
+
+    // Optional explicit keywords in MT5: "Commission: -2.50 Swap: -1.00 Profit: 150.00"
+    const commMatch = line.match(/commission:?\s*(-?\d+[\.,]?\d*)/i);
+    if (commMatch) candidate.commission = commMatch[1];
+
+    const swapMatch = line.match(/swap:?\s*(-?\d+[\.,]?\d*)/i);
+    if (swapMatch) candidate.swap = swapMatch[1];
+
+    const profitMatch = line.match(/(?:profit|pnl):?\s*(-?\$?\d+[\.,]?\d*)/i);
+    if (profitMatch) {
+      candidate.grossPnl = profitMatch[1];
+    } else if (tokens.length > offset) {
+      // Fallback to last token if numbers are columnated
+      const lastToken = tokens[tokens.length - 1];
+      if (/^-?\$?\d+[\.,]?\d*$/.test(lastToken.replace(/[()]/g, ""))) {
+        candidate.grossPnl = lastToken;
+      }
+    }
+
+    return candidate;
   }
 }
 
@@ -349,4 +457,15 @@ export const PROFILES: Record<PlatformSource, TradingScreenshotProfile> = {
 export function parseOcrText(text: string, source: PlatformSource): Partial<Record<string, string>>[] {
   const profile = PROFILES[source] || PROFILES["Generic Broker"];
   return profile.parse(text);
+}
+
+export function parseOcrTextDetailed(text: string, source: PlatformSource): ProfileParseResult {
+  const profile = PROFILES[source] || PROFILES["Generic Broker"];
+  if (profile instanceof Mt5Profile) {
+    return profile.parseDetailed(text);
+  }
+  return {
+    trades: profile.parse(text),
+    nonTradeRows: [],
+  };
 }

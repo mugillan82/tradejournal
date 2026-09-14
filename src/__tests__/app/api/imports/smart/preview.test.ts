@@ -205,4 +205,26 @@ describe("Smart Import Preview API Security", () => {
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain("5 MB");
   });
+
+  it("returns terminal 408 TIMEOUT when processing operation exceeds bounded timeout", async () => {
+    vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
+    vi.mocked(accountService.getTradingAccountById).mockResolvedValue({
+      id: "acc-1",
+      userId: "user-1",
+    } as unknown as TradingAccountDto);
+
+    const smartService = await import("@/lib/trading/smart-import/service");
+    vi.spyOn(smartService, "processScreenshot").mockRejectedValueOnce(
+      new Error("TIMEOUT: Smart Import processing exceeded 10000ms budget")
+    );
+
+    const validPng = createPngBuffer(100, 100);
+    const req = createMockRequest("acc-1", new File([new Uint8Array(validPng)], "test.png", { type: "image/png" }));
+    const res = await POST(req);
+
+    expect(res.status).toBe(408);
+    const body = (await res.json()) as { error: string; message: string };
+    expect(body.error).toBe("TIMEOUT");
+    expect(body.message).toContain("timed out");
+  });
 });

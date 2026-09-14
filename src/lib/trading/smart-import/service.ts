@@ -1,14 +1,17 @@
 import { TesseractOcrProvider } from "./ocr";
 import { detectSource } from "./source-detection";
-import { parseOcrText } from "./parsing";
+import { parseOcrTextDetailed } from "./parsing";
 import { normalizeRawCandidate } from "./normalization";
 import { evaluateConfidence } from "./confidence";
-import { SmartImportResult } from "./types";
+import { SmartImportResult, NonTradeRow } from "./types";
 import { NormalizedTradeCandidate } from "../import/types";
 import { GeminiVisionProvider, GeminiExtractionResult } from "./gemini-vision";
 
 const ocrProvider = new TesseractOcrProvider();
 const geminiProvider = new GeminiVisionProvider();
+
+export const PIPELINE_TIMEOUT_MS = 10000; // 10 seconds total pipeline budget
+export const AI_VISION_TIMEOUT_MS = 3000; // 3 seconds max for optional AI fallback
 
 interface RateLimitBucket {
   count: number;
@@ -44,63 +47,103 @@ function checkVisionRateLimit(userId: string): void {
   bucket.count += 1;
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, timeoutMessage: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, ms);
+
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 export async function processScreenshot(
   imageBuffer: Buffer,
   mimeType: string,
   tradingAccountId: string,
   userId: string
 ): Promise<SmartImportResult> {
-  // 1. OCR Extraction (always runs for fallback and cross-check)
-  const ocrResult = await ocrProvider.readText(imageBuffer, mimeType);
+  return withTimeout(
+    (async () => {
+      // 1. OCR Extraction (bounded by OCR_TIMEOUT_MS)
+      const ocrResult = await ocrProvider.readText(imageBuffer, mimeType);
 
-  // 2. Source Detection
-  let sourceDetection = detectSource(ocrResult.text);
+      // 2. Platform Source Detection
+      let sourceDetection = detectSource(ocrResult.text);
 
-  // 3. Extraction (Gemini Vision preferred, fallback to Local Parsing)
-  let rawCandidates: Partial<Record<string, string>>[] = [];
-  let geminiResult: GeminiExtractionResult | null = null;
+      // 3. Deterministic Local Parsing (Extracts MT5 mobile/desktop trades and non-trade cashflows)
+      const localResult = parseOcrTextDetailed(ocrResult.text, sourceDetection.source);
+      let rawCandidates: Partial<Record<string, string>>[] = localResult.trades;
+      const nonTradeRows: NonTradeRow[] = localResult.nonTradeRows;
 
-  if (geminiProvider.isConfigured()) {
-    try {
-      checkVisionRateLimit(userId);
-      geminiResult = await geminiProvider.extractTrades(imageBuffer, mimeType, ocrResult.text);
-      rawCandidates = geminiResult.trades;
-      // Boost source detection if Gemini is confident
-      if (geminiResult.sourceConfidence > sourceDetection.confidence) {
-        sourceDetection = {
-          source: geminiResult.source,
-          confidence: geminiResult.sourceConfidence,
-          evidence: ["Gemini Vision"],
-        };
+      let geminiResult: GeminiExtractionResult | null = null;
+
+      // 4. Optional AI Vision Fallback (Only if local parsing found 0 candidates and Gemini is configured)
+      if (rawCandidates.length === 0 && geminiProvider.isConfigured()) {
+        try {
+          checkVisionRateLimit(userId);
+          // Run AI Vision with strict non-blocking timeout
+          geminiResult = await withTimeout(
+            geminiProvider.extractTrades(imageBuffer, mimeType, ocrResult.text),
+            AI_VISION_TIMEOUT_MS,
+            `Gemini Vision timed out after ${AI_VISION_TIMEOUT_MS}ms`
+          );
+          if (geminiResult && Array.isArray(geminiResult.trades) && geminiResult.trades.length > 0) {
+            rawCandidates = geminiResult.trades;
+            if (geminiResult.sourceConfidence > sourceDetection.confidence) {
+              sourceDetection = {
+                source: geminiResult.source,
+                confidence: geminiResult.sourceConfidence,
+                evidence: ["Gemini Vision"],
+              };
+            }
+          }
+        } catch (err: unknown) {
+          console.warn("Optional Gemini Vision fallback omitted/failed:", err instanceof Error ? err.message : err);
+        }
       }
-    } catch (err: unknown) {
-      console.warn("Gemini Vision Extraction failed, falling back to local OCR:", err);
-      // Fallback to platform-specific parsing on failure
-      rawCandidates = parseOcrText(ocrResult.text, sourceDetection.source);
-    }
-  } else {
-    // Local Parsing
-    rawCandidates = parseOcrText(ocrResult.text, sourceDetection.source);
-  }
 
-  // 4. Normalization and Confidence
-  const candidates: NormalizedTradeCandidate[] = [];
+      // 5. Normalization, Validation, and Confidence
+      const candidates: NormalizedTradeCandidate[] = [];
+      let hasUncertainOrInvalidCandidates = false;
 
-  for (let i = 0; i < rawCandidates.length; i++) {
-    const raw = rawCandidates[i];
-    
-    // Normalize
-    const normalized = normalizeRawCandidate(raw, i);
-    normalized.tradingAccountId = tradingAccountId; // assign ownership
+      for (let i = 0; i < rawCandidates.length; i++) {
+        const raw = rawCandidates[i];
 
-    // Calculate confidence (passing OCR text for cross-check)
-    evaluateConfidence(normalized, raw, sourceDetection.confidence, geminiResult !== null, ocrResult.text);
+        // Normalize
+        const normalized = normalizeRawCandidate(raw, i);
+        normalized.tradingAccountId = tradingAccountId; // assign ownership
 
-    candidates.push(normalized);
-  }
+        // Calculate confidence (passing OCR text for cross-check)
+        evaluateConfidence(normalized, raw, sourceDetection.confidence, geminiResult !== null, ocrResult.text);
 
-  return {
-    candidates,
-    sourceDetection,
-  };
+        if (!normalized.isValid || normalized.confidence.level === "LOW") {
+          hasUncertainOrInvalidCandidates = true;
+        }
+
+        candidates.push(normalized);
+      }
+
+      // 6. Terminal status calculation
+      const status: "SUCCESS" | "NEEDS_REVIEW" =
+        candidates.length === 0 || hasUncertainOrInvalidCandidates ? "NEEDS_REVIEW" : "SUCCESS";
+
+      return {
+        status,
+        candidates,
+        sourceDetection,
+        nonTradeRows,
+      };
+    })(),
+    PIPELINE_TIMEOUT_MS,
+    `TIMEOUT: Smart Import processing exceeded ${PIPELINE_TIMEOUT_MS}ms budget`
+  );
 }

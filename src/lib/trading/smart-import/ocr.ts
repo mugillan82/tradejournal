@@ -1,38 +1,82 @@
 import { createWorker } from "tesseract.js";
 import { OcrProvider, OcrResult } from "./types";
 
+export const OCR_TIMEOUT_MS = 8000;
+
 export class TesseractOcrProvider implements OcrProvider {
   private worker: Tesseract.Worker | null = null;
+  private initializingPromise: Promise<void> | null = null;
 
   async initialize(): Promise<void> {
     if (this.worker) return;
+    if (this.initializingPromise) {
+      return this.initializingPromise;
+    }
     
-    // Create the worker locally
-    this.worker = await createWorker("eng");
+    this.initializingPromise = (async () => {
+      try {
+        this.worker = await createWorker("eng");
+      } finally {
+        this.initializingPromise = null;
+      }
+    })();
+
+    return this.initializingPromise;
   }
 
   async readText(imageBuffer: Buffer, mimeType: string): Promise<OcrResult> {
     void mimeType;
-    if (!this.worker) {
-      await this.initialize();
-    }
 
-    try {
-      // tesseract.js can accept a Buffer directly in Node.js
-      const { data } = await this.worker!.recognize(imageBuffer);
-      return {
-        text: data.text,
-        confidence: data.confidence, // typically 0-100 scale from tesseract
-      };
-    } catch (error) {
-      throw new Error(`OCR processing failed: ${error}`);
-    }
+    return new Promise<OcrResult>((resolve, reject) => {
+      let isSettled = false;
+
+      const timer = setTimeout(async () => {
+        if (isSettled) return;
+        isSettled = true;
+        // Kill the hanging worker to release resources and reset state
+        await this.terminate().catch(() => {});
+        reject(new Error(`OCR operation timed out after ${OCR_TIMEOUT_MS}ms`));
+      }, OCR_TIMEOUT_MS);
+
+      (async () => {
+        try {
+          if (!this.worker) {
+            await this.initialize();
+          }
+
+          // tesseract.js can accept a Buffer directly in Node.js
+          const { data } = await this.worker!.recognize(imageBuffer);
+          if (!isSettled) {
+            isSettled = true;
+            clearTimeout(timer);
+            resolve({
+              text: data.text || "",
+              confidence: typeof data.confidence === "number" ? data.confidence : 0,
+            });
+          }
+        } catch (error) {
+          if (!isSettled) {
+            isSettled = true;
+            clearTimeout(timer);
+            // On worker failure, terminate so next request does not reuse a corrupted worker
+            await this.terminate().catch(() => {});
+            reject(new Error(`OCR processing failed: ${error instanceof Error ? error.message : String(error)}`));
+          }
+        }
+      })();
+    });
   }
 
   async terminate(): Promise<void> {
     if (this.worker) {
-      await this.worker.terminate();
+      const activeWorker = this.worker;
       this.worker = null;
+      this.initializingPromise = null;
+      try {
+        await activeWorker.terminate();
+      } catch {
+        // Ignore termination errors during forced teardown
+      }
     }
   }
 }

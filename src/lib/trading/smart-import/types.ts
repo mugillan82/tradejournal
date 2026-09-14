@@ -47,7 +47,22 @@ export interface TradingScreenshotProfile {
   parse(text: string): Partial<Record<string, string>>[];
 }
 
+export type SmartImportStatus = "IDLE" | "PROCESSING" | "SUCCESS" | "NEEDS_REVIEW" | "FAILED" | "TIMEOUT";
+
+export interface NonTradeRow {
+  type: "Balance" | "Deposit" | "Withdrawal" | "Swap" | "Commission" | "Other";
+  rawText: string;
+}
+
+export interface ProfileParseResult {
+  trades: Partial<Record<string, string>>[];
+  nonTradeRows: NonTradeRow[];
+}
+
 export interface SmartImportResult {
+  status: "SUCCESS" | "NEEDS_REVIEW";
   candidates: NormalizedTradeCandidate[];
   sourceDetection: SourceDetectionResult;
+  nonTradeRows?: NonTradeRow[];
+  warnings?: string[];
 }

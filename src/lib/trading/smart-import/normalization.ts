@@ -24,12 +24,19 @@ export function normalizeOcrDecimal(val?: string): string | undefined {
     str = str.replace(/-/g, "").trim();
   }
 
-  // Strip currency symbols and whitespace
+  // Strip leading plus
+  if (str.startsWith("+")) {
+    str = str.slice(1).trim();
+  }
+
+  // Strip currency symbols and whitespace (including space thousands separators e.g. 29 201.87)
   str = str.replace(/[$€£¥₹\s]/g, "");
 
-  // If after stripping it still has minus
+  // If after stripping it still has minus or plus
   if (str.startsWith("-")) {
     isNegative = true;
+    str = str.slice(1);
+  } else if (str.startsWith("+")) {
     str = str.slice(1);
   }
 
