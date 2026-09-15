@@ -8,6 +8,11 @@ import * as authSession from "@/lib/auth/session";
 import * as accountService from "@/lib/trading/account/service";
 import type { TradingAccountDto } from "@/lib/trading/account/types";
 
+import path from "path";
+import fs from "fs/promises";
+
+import * as tradeService from "@/lib/trading/trade/service";
+
 vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/auth/session", () => ({
@@ -16,6 +21,10 @@ vi.mock("@/lib/auth/session", () => ({
 
 vi.mock("@/lib/trading/account/service", () => ({
   getTradingAccountById: vi.fn(),
+}));
+
+vi.mock("@/lib/trading/trade/service", () => ({
+  listTrades: vi.fn(),
 }));
 
 // Helper to create minimal PNG buffer with custom width and height
@@ -43,6 +52,12 @@ function createPngBuffer(width: number, height: number): Buffer {
 describe("Smart Import Preview API Security", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(tradeService.listTrades).mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 50,
+    });
   });
 
   function createMockRequest(accountId: string | null, file: File | null) {
@@ -227,4 +242,72 @@ describe("Smart Import Preview API Security", () => {
     expect(body.error).toBe("TIMEOUT");
     expect(body.message).toContain("timed out");
   });
+
+  it(
+    "processes real 30-trade MT5 screenshot end-to-end and returns all 30 candidates without truncation",
+    { timeout: 35000 },
+    async () => {
+      vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({
+        id: "acc-1",
+        userId: "user-1",
+      } as unknown as TradingAccountDto);
+
+      const fixturePath = path.resolve("src/__tests__/fixtures/real_mt5_history_screenshot.jpg");
+      const fileBuf = await fs.readFile(fixturePath);
+      const file = new File([new Uint8Array(fileBuf)], "real_mt5.jpg", { type: "image/jpeg" });
+      const req = createMockRequest("acc-1", file);
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+
+      expect(body.success).toBe(true);
+      expect(body.sourceDetection.source).toBe("MT5");
+      expect(body.preview.candidates).toHaveLength(30);
+      expect(body.preview.nonTradeCount).toBeGreaterThanOrEqual(5);
+
+      // Verify no non-trade rows leaked into candidates
+      for (const c of body.preview.candidates) {
+        expect(/balance|deposit|withdrawal|swap|commission/i.test(c.title || "")).toBe(false);
+      }
+    }
+  );
+
+  it(
+    "processes single-trade MT5 screenshot end-to-end and returns exact 1 candidate with 5 excluded non-trades",
+    { timeout: 35000 },
+    async () => {
+      vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({
+        id: "acc-1",
+        userId: "user-1",
+      } as unknown as TradingAccountDto);
+
+      const fixturePath = path.resolve("src/__tests__/fixtures/single_trade_mt5_screenshot.jpg");
+      const fileBuf = await fs.readFile(fixturePath);
+      const file = new File([new Uint8Array(fileBuf)], "single_trade.jpg", { type: "image/jpeg" });
+      const req = createMockRequest("acc-1", file);
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+
+      expect(body.success).toBe(true);
+      expect(body.sourceDetection.source).toBe("MT5");
+      expect(body.preview.candidates).toHaveLength(1);
+      expect(body.preview.readyCount).toBe(1);
+      expect(body.preview.duplicateCount).toBe(0);
+      expect(body.preview.errorCount).toBe(0);
+      expect(body.preview.nonTradeCount).toBe(5);
+
+      const trade = body.preview.candidates[0];
+      expect(trade.title).toBe("NAS100");
+      expect(trade.side).toBe("SHORT");
+      expect(trade.quantity).toBe("0.41");
+      expect(trade.entryPrice).toBe("29029.97");
+      expect(trade.exitPrice).toBe("29095.47");
+      expect(trade.grossPnl).toBe("-268.55");
+    }
+  );
 });
