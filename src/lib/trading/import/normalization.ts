@@ -40,6 +40,14 @@ export function normalizeDecimal(value: string | number | null | undefined): Dec
   return null;
 }
 
+export function normalizeMonetary(value: string | number | null | undefined): DecimalString | null {
+  const dec = normalizeDecimal(value);
+  if (!dec) return null;
+  const num = parseFloat(dec);
+  if (Number.isNaN(num)) return null;
+  return num.toFixed(2) as DecimalString;
+}
+
 export function normalizeSide(value: string | null | undefined): TradeSideValue | null {
   if (!value) return null;
   

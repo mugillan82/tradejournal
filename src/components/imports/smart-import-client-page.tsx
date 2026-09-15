@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { CheckCircle2, AlertCircle, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -340,12 +341,23 @@ export function SmartImportClientPage() {
                     <td className="p-3">{c.entryPrice}</td>
                     <td className="p-3">{c.grossPnl || "-"}</td>
                     <td className="p-3">
-                      {c.duplicateMatch?.classification !== "NONE" ? (
-                        <span className="text-yellow-600 flex items-center gap-1">
+                      {c.duplicateMatch?.classification && c.duplicateMatch.classification !== "NONE" ? (
+                        <span
+                          className="text-yellow-600 flex items-center gap-1 cursor-help"
+                          title={c.duplicateMatch?.reasons?.join(", ") || "Duplicate trade detected"}
+                        >
                           <AlertCircle className="w-3 h-3" /> Duplicate
                         </span>
                       ) : !c.isValid ? (
-                        <span className="text-red-600 flex items-center gap-1">
+                        <span
+                          className="text-red-600 flex items-center gap-1 cursor-help"
+                          title={
+                            c.validationIssues
+                              ?.filter((i) => i.level === "ERROR")
+                              .map((i) => i.message)
+                              .join(", ") || "Invalid trade data"
+                          }
+                        >
                           <XCircle className="w-3 h-3" /> Invalid
                         </span>
                       ) : (
@@ -403,24 +415,45 @@ export function SmartImportClientPage() {
       )}
 
       {importResult && (
-        <Alert className="bg-green-50 border-green-200">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-          <div className="font-semibold mb-1 text-green-800">Import Complete</div>
-          <div className="text-sm text-green-700">
-            Successfully imported {importResult.successful} trades. {importResult.failed} failed.
+        <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/40">
+          <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <div className="font-semibold mb-1 text-green-800 dark:text-green-300">Import Complete</div>
+          <div className="text-sm text-green-700 dark:text-green-400">
+            Successfully imported {importResult.successful} trades.
+            {importResult.failed > 0 && ` (${importResult.failed} failed)`}
           </div>
-          <Button
-            variant="secondary"
-            className="mt-4"
-            onClick={() => {
-              setPreview(null);
-              setImportResult(null);
-              setSourceDetection(null);
-              setFile(null);
-            }}
-          >
-            Import Another Screenshot
-          </Button>
+          {importResult.errors && importResult.errors.length > 0 && (
+            <div className="mt-2 text-xs text-red-600 dark:text-red-400 space-y-1">
+              {importResult.errors.map((err, idx) => (
+                <div key={idx}>• {err.error}</div>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-3 mt-4">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center gap-2 font-medium rounded-lg px-4 py-2 text-sm bg-emerald-600 text-white hover:bg-emerald-500 active:bg-emerald-700 transition-all duration-200"
+            >
+              Go to Dashboard
+            </Link>
+            <Link
+              href="/trades"
+              className="inline-flex items-center justify-center gap-2 font-medium rounded-lg px-4 py-2 text-sm bg-slate-800 text-slate-200 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 transition-all duration-200"
+            >
+              View Trades
+            </Link>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setPreview(null);
+                setImportResult(null);
+                setSourceDetection(null);
+                setFile(null);
+              }}
+            >
+              Import Another Screenshot
+            </Button>
+          </div>
         </Alert>
       )}
     </div>

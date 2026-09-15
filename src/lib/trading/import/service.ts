@@ -15,6 +15,7 @@ import { ColumnMapping, CanonicalField } from "./mapping";
 import { 
   normalizeDate, 
   normalizeDecimal, 
+  normalizeMonetary,
   normalizeSide, 
   normalizeStatus,
   normalizeString
@@ -283,12 +284,12 @@ export async function confirmImport(
     candidate.quantity = normalizeDecimal(candidate.quantity) || undefined;
     candidate.stopLoss = normalizeDecimal(candidate.stopLoss) || undefined;
     candidate.takeProfit = normalizeDecimal(candidate.takeProfit) || undefined;
-    candidate.riskAmount = normalizeDecimal(candidate.riskAmount) || undefined;
-    candidate.grossPnl = normalizeDecimal(candidate.grossPnl) || undefined;
-    candidate.netPnl = normalizeDecimal(candidate.netPnl) || undefined;
-    candidate.commission = normalizeDecimal(candidate.commission) || undefined;
-    candidate.fees = normalizeDecimal(candidate.fees) || undefined;
-    candidate.swap = normalizeDecimal(candidate.swap) || undefined;
+    candidate.riskAmount = normalizeMonetary(candidate.riskAmount) || undefined;
+    candidate.grossPnl = normalizeMonetary(candidate.grossPnl) || undefined;
+    candidate.netPnl = normalizeMonetary(candidate.netPnl) || undefined;
+    candidate.commission = normalizeMonetary(candidate.commission) || undefined;
+    candidate.fees = normalizeMonetary(candidate.fees) || undefined;
+    candidate.swap = normalizeMonetary(candidate.swap) || undefined;
 
     // Re-validate to ensure client didn't tamper with isValid
     const validated = validateCandidate(candidate);
@@ -323,7 +324,11 @@ export async function confirmImport(
       entryPrice: candidate.entryPrice!,
       entryDate: new Date(candidate.entryDate!), // convert from string/Date back to Date if JSON stringified
       exitPrice: candidate.exitPrice,
-      exitDate: candidate.exitDate ? new Date(candidate.exitDate) : undefined,
+      exitDate: candidate.exitDate
+        ? new Date(candidate.exitDate)
+        : candidate.status === "CLOSED" && candidate.entryDate
+        ? new Date(candidate.entryDate)
+        : undefined,
       stopLoss: candidate.stopLoss,
       takeProfit: candidate.takeProfit,
       riskAmount: candidate.riskAmount,

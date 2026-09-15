@@ -239,4 +239,62 @@ NAS100.x, buy 0.09
     expect(resC.trades[0].entryDate).toBeUndefined();
     expect(resC.trades[0].grossPnl).toBe("12.50");
   });
+
+  it("11. successfully parses various OCR arrow/dash separators (—~, —-, —., _)", () => {
+    const ocrText = `
+NAS100.x, buy 0.10
+29 100.00 —~ 29 200.00
+2026.09.10 10:00:00
+10.00
+
+NAS100.x, sell 0.10
+29 200.00 —- 29 100.00
+2026.09.10 11:00:00
+-10.00
+
+NAS100.x, buy 0.10
+29 100.00 —. 29 200.00
+2026.09.10 12:00:00
+10.00
+
+EURUSD.x, sell 0.50
+1.08500 _ 1.08000
+2026.09.10 13:00:00
+25.00
+`;
+    const res = profile.parseDetailed(ocrText);
+    expect(res.trades).toHaveLength(4);
+    expect(res.trades[0].entryPrice).toBe("29100.00");
+    expect(res.trades[0].exitPrice).toBe("29200.00");
+    expect(res.trades[1].entryPrice).toBe("29200.00");
+    expect(res.trades[1].exitPrice).toBe("29100.00");
+    expect(res.trades[2].entryPrice).toBe("29100.00");
+    expect(res.trades[2].exitPrice).toBe("29200.00");
+    expect(res.trades[3].entryPrice).toBe("1.08500");
+    expect(res.trades[3].exitPrice).toBe("1.08000");
+  });
+
+  it("12. pre-normalizes OCR date noise (00 month, 7026 year, comma separator)", () => {
+    const ocrText = `
+NAS100.x, buy 0.10
+29 100.00 -> 29 200.00
+2026.00.02 10:00:00
+10.00
+
+NAS100.x, sell 0.10
+29 200.00 -> 29 100.00
+7026.09.05 11:00:00
+-10.00
+
+EURUSD.x, sell 0.50
+1.08500 -> 1.08000
+2026.09,09 13:00:00
+25.00
+`;
+    const res = profile.parseDetailed(ocrText);
+    expect(res.trades).toHaveLength(3);
+    expect(res.trades[0].entryDate).toBe("2026.09.02 10:00:00");
+    expect(res.trades[1].entryDate).toBe("2026.09.05 11:00:00");
+    expect(res.trades[2].entryDate).toBe("2026.09.09 13:00:00");
+  });
 });

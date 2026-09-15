@@ -166,5 +166,43 @@ describe("Import Service Hardening", () => {
       expect(result.errors[0].error).toBe("Database error");
       expect(tradeService.createTrade).toHaveBeenCalledTimes(2);
     });
+
+    it("defaults exitDate for CLOSED trades from entryDate and normalizes monetary fields", async () => {
+      vi.mocked(authSession.requireServerUserId).mockResolvedValue("user-1");
+      vi.mocked(accountService.getTradingAccountById).mockResolvedValue({ id: "acc-1" } as unknown as TradingAccountDto);
+      vi.mocked(tradeService.listTrades).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 5000 });
+      vi.mocked(tradeService.createTrade).mockResolvedValue({ id: "trade-closed-1" } as TradeDto);
+
+      const closedCandidate: NormalizedTradeCandidate = {
+        candidateId: "cand-closed-1",
+        tradingAccountId: "acc-1",
+        side: "SHORT" as TradeSideValue,
+        status: "CLOSED" as TradeStatusValue,
+        entryDate: "2026-09-02T04:24:00Z" as unknown as Date,
+        exitDate: undefined, // Missing explicit exitDate
+        entryPrice: "29029.97",
+        exitPrice: "29032.65",
+        quantity: "0.10",
+        grossPnl: "-268.552", // 3 decimal places from OCR noise
+        commission: "0.501",
+        validationIssues: [],
+        confidence: { score: 1, level: "HIGH", reasons: [] },
+        duplicateMatch: { classification: "NONE", reasons: [] },
+        isValid: true,
+      };
+
+      const result = await confirmImport([closedCandidate]);
+
+      expect(result.successful).toBe(1);
+      expect(result.failed).toBe(0);
+      expect(tradeService.createTrade).toHaveBeenCalledTimes(1);
+
+      const passedInput = vi.mocked(tradeService.createTrade).mock.calls[0][0];
+      expect(passedInput.status).toBe("CLOSED");
+      expect(passedInput.exitDate).toBeDefined();
+      expect(passedInput.exitDate?.toISOString()).toBe(new Date("2026-09-02T04:24:00Z").toISOString());
+      expect(passedInput.grossPnl).toBe("-268.55");
+      expect(passedInput.commission).toBe("0.50");
+    });
   });
 });
