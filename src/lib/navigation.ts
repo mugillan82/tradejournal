@@ -23,7 +23,6 @@ import {
   ClipboardList,
   Wallet,
   Database,
-  Download,
   Settings as SettingsIcon,
   HelpCircle,
 } from "@/components/icons";
@@ -168,12 +167,6 @@ export const navigation: NavSection[] = [
         label: "Data Management",
         href: "/data-management",
         icon: Database,
-        status: "ready",
-      },
-      {
-        label: "Export",
-        href: "/data-management",
-        icon: Download,
         status: "ready",
       },
     ],
