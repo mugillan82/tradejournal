@@ -69,12 +69,25 @@ export async function processScreenshot(
   imageBuffer: Buffer,
   mimeType: string,
   tradingAccountId: string,
-  userId: string
+  userId: string,
+  signal?: AbortSignal
 ): Promise<SmartImportResult> {
+  if (signal?.aborted) {
+    throw new Error("CLIENT_ABORTED");
+  }
+
   return withTimeout(
     (async () => {
+      if (signal?.aborted) {
+        throw new Error("CLIENT_ABORTED");
+      }
+
       // 1. OCR Extraction (bounded by OCR_TIMEOUT_MS)
-      const ocrResult = await ocrProvider.readText(imageBuffer, mimeType);
+      const ocrResult = await ocrProvider.readText(imageBuffer, mimeType, signal);
+
+      if (signal?.aborted) {
+        throw new Error("CLIENT_ABORTED");
+      }
 
       // 2. Platform Source Detection
       let sourceDetection = detectSource(ocrResult.text);
@@ -87,7 +100,7 @@ export async function processScreenshot(
       let geminiResult: GeminiExtractionResult | null = null;
 
       // 4. Optional AI Vision Fallback (Only if local parsing found 0 candidates and Gemini is configured)
-      if (rawCandidates.length === 0 && geminiProvider.isConfigured()) {
+      if (rawCandidates.length === 0 && geminiProvider.isConfigured() && !signal?.aborted) {
         try {
           checkVisionRateLimit(userId);
           // Run AI Vision with strict non-blocking timeout

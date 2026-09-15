@@ -32,6 +32,9 @@ describe("Real MT5 Mobile History Screenshot Verification", () => {
 
       const totalPipelineDuration = performance.now() - start;
 
+      // Pipeline execution budget assertion: must complete well within the intended budget
+      expect(totalPipelineDuration).toBeLessThan(10000);
+
       // 1. Source Detection: Must classify as MT5
       expect(result.sourceDetection.source).toBe("MT5");
       expect(result.sourceDetection.confidence).toBeGreaterThanOrEqual(0.8);

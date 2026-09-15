@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CheckCircle2, AlertCircle, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,18 @@ export function SmartImportClientPage() {
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [importResult, setImportResult] = useState<ConfirmImportResult | null>(null);
 
+  const activeControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      // Abort any pending upload request on component unmount
+      if (activeControllerRef.current) {
+        activeControllerRef.current.abort();
+        activeControllerRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     fetchTradingAccountsClient()
       .then((res) => {
@@ -45,6 +57,10 @@ export function SmartImportClientPage() {
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (activeControllerRef.current) {
+      activeControllerRef.current.abort();
+      activeControllerRef.current = null;
+    }
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
       setPreview(null);
@@ -62,6 +78,10 @@ export function SmartImportClientPage() {
       return;
     }
 
+    if (activeControllerRef.current) {
+      activeControllerRef.current.abort();
+    }
+
     setIsLoading(true);
     setStatus("PROCESSING");
     setError("");
@@ -71,7 +91,10 @@ export function SmartImportClientPage() {
     formData.append("tradingAccountId", selectedAccountId);
 
     const controller = new AbortController();
+    activeControllerRef.current = controller;
+    let didTimeout = false;
     const timeoutId = setTimeout(() => {
+      didTimeout = true;
       controller.abort();
     }, 15000); // 15-second client-side timeout
 
@@ -92,6 +115,10 @@ export function SmartImportClientPage() {
         sourceDetection?: SourceDetectionResult;
         preview?: ImportPreview;
       };
+
+      if (activeControllerRef.current !== controller) {
+        return;
+      }
 
       if (!res.ok) {
         const isTimeoutResponse = res.status === 408 || data.error === "TIMEOUT";
@@ -120,16 +147,21 @@ export function SmartImportClientPage() {
       }
     } catch (err: unknown) {
       clearTimeout(timeoutId);
+      if (activeControllerRef.current !== controller) {
+        return;
+      }
+
       const isTimeout =
-        err instanceof Error &&
-        (err.name === "AbortError" ||
-          err.message.includes("aborted") ||
-          (err as { isTimeout?: boolean }).isTimeout === true);
+        didTimeout ||
+        (err instanceof Error &&
+          (err.name === "AbortError" ||
+            err.message.includes("aborted") ||
+            (err as { isTimeout?: boolean }).isTimeout === true));
 
       if (isTimeout) {
         setStatus("TIMEOUT");
         setError(
-          err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted"))
+          didTimeout || (err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted")))
             ? "Screenshot processing timed out after 15 seconds. Please click 'Retry Extraction' or try a clearer image."
             : err instanceof Error
             ? err.message
@@ -140,7 +172,11 @@ export function SmartImportClientPage() {
         setError(err instanceof Error ? err.message : "Failed to upload screenshot");
       }
     } finally {
-      setIsLoading(false);
+      clearTimeout(timeoutId);
+      if (activeControllerRef.current === controller) {
+        activeControllerRef.current = null;
+        setIsLoading(false);
+      }
     }
   };
 

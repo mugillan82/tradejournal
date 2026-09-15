@@ -135,4 +135,61 @@ describe("SmartImportClientPage - Frontend Timeout and Terminal State Transition
     expect(screen.queryByText("Extraction Failed")).toBeNull();
     expect(screen.getByRole("button", { name: /Retry Extraction/i })).toBeTruthy();
   });
+
+  it("4. does not enter TIMEOUT when processing completes successfully within deadline", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        status: "NEEDS_REVIEW",
+        sourceDetection: {
+          source: "MT5",
+          confidence: 0.95,
+          evidence: ["NAS100.X", "EURUSD.X"],
+        },
+        preview: {
+          candidates: [
+            {
+              id: "cand-1",
+              title: "NAS100.X",
+              side: "LONG",
+              quantity: "0.05",
+              entryPrice: "29201.87",
+              exitPrice: "29270.00",
+              isValid: true,
+              confidence: { level: "HIGH", score: 0.9, reasons: [] },
+            },
+          ],
+          duplicateCount: 0,
+          errorCount: 0,
+          readyCount: 1,
+          nonTradeCount: 0,
+          excludedRows: [],
+        },
+      }),
+    });
+
+    const { container } = render(<SmartImportClientPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Live MT5 Account/i)).toBeTruthy();
+    });
+
+    const file = new File(["fake-image-bytes"], "screenshot.png", { type: "image/png" });
+    const fileInput = container.querySelector('input[type="file"]')!;
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const extractBtn = screen.getByRole("button", { name: /Extract Trades/i });
+    fireEvent.click(extractBtn);
+
+    // Verify successful preview state
+    await waitFor(() => {
+      expect(screen.getByText(/Detected Source: MT5/i)).toBeTruthy();
+    });
+
+    expect(screen.queryByText("Extraction Timed Out")).toBeNull();
+    expect(screen.queryByText("Extraction Failed")).toBeNull();
+    expect(screen.getByText(/Ready to Import/i)).toBeTruthy();
+  });
 });

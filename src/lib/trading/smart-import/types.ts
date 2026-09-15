@@ -18,7 +18,7 @@ export interface OcrProvider {
   /**
    * Reads text from an image buffer.
    */
-  readText(imageBuffer: Buffer, mimeType: string): Promise<OcrResult>;
+  readText(imageBuffer: Buffer, mimeType: string, signal?: AbortSignal): Promise<OcrResult>;
 
   /**
    * Cleans up resources.

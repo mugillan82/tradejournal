@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: imageValidation.error }, { status: 400 });
     }
 
-    // Process screenshot via Smart Import pipeline
-    const result = await processScreenshot(buffer, file.type, account.id, userId);
+    // Process screenshot via Smart Import pipeline (passing client abort signal for lifecycle safety)
+    const result = await processScreenshot(buffer, file.type, account.id, userId, req.signal);
 
     // If no candidates extracted, return early
     if (result.candidates.length === 0) {
@@ -123,6 +123,9 @@ export async function POST(req: NextRequest) {
     const message = error instanceof Error ? error.message : "Failed to process screenshot";
     if (message === "AUTH_REQUIRED") {
       return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
+    }
+    if (message === "CLIENT_ABORTED" || req.signal.aborted) {
+      return NextResponse.json({ error: "ABORTED", message: "Client cancelled request" }, { status: 499 });
     }
     if (message.startsWith("TIMEOUT") || message.toLowerCase().includes("timed out")) {
       return NextResponse.json(
