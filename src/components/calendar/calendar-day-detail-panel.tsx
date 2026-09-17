@@ -60,7 +60,7 @@ export function CalendarDayDetailPanel({
       {/* Panel Header */}
       <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-800">
         <div>
-          <div className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">
+          <div className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
             Day Details
           </div>
           <h2 className="text-base sm:text-lg font-bold text-slate-100 mt-0.5" data-testid="day-detail-date">

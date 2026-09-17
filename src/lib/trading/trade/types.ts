@@ -150,9 +150,9 @@ export interface CreateTradeInput {
   readonly tradingAccountId: string;
   readonly side: TradeSideValue;
   readonly entryPrice: DecimalString;
-  readonly entryDate: Date;
+  readonly entryDate: Date | string;
   readonly exitPrice?: DecimalString | null;
-  readonly exitDate?: Date | null;
+  readonly exitDate?: Date | string | null;
   readonly stopLoss?: DecimalString | null;
   readonly takeProfit?: DecimalString | null;
   readonly riskAmount?: DecimalString | null;
@@ -182,9 +182,9 @@ export interface CreateTradeInput {
 export interface UpdateTradeInput {
   readonly side?: TradeSideValue;
   readonly entryPrice?: DecimalString;
-  readonly entryDate?: Date;
+  readonly entryDate?: Date | string;
   readonly exitPrice?: DecimalString | null;
-  readonly exitDate?: Date | null;
+  readonly exitDate?: Date | string | null;
   readonly stopLoss?: DecimalString | null;
   readonly takeProfit?: DecimalString | null;
   readonly riskAmount?: DecimalString | null;

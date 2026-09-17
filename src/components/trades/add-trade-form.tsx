@@ -15,7 +15,7 @@
 
 import { useState, useEffect, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import type { TradingAccountDto } from "@/lib/trading/account/types";
 import type { TradeSideValue, TradeStatusValue } from "@/lib/trading/trade/types";
@@ -90,6 +90,8 @@ function toLocalDatetimeString(date: Date): string {
 
 export function AddTradeForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedAccountId = searchParams.get("tradingAccountId") || searchParams.get("accountId");
 
   // Accounts state
   const [accounts, setAccounts] = useState<ReadonlyArray<TradingAccountDto>>([]);
@@ -144,9 +146,9 @@ export function AddTradeForm() {
         if (isMounted) {
           setAccounts(accs);
           if (accs.length > 0) {
-            // Default to first active account
-            const firstActive = accs.find((a) => a.isActive) ?? accs[0];
-            setTradingAccountId(firstActive.id);
+            const matchingAcc = requestedAccountId ? accs.find((a) => a.id === requestedAccountId) : null;
+            const targetAcc = matchingAcc ?? (accs.find((a) => a.isActive) ?? accs[0]);
+            setTradingAccountId(targetAcc.id);
           }
         }
       } catch {
@@ -165,7 +167,7 @@ export function AddTradeForm() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [requestedAccountId]);
 
   // Client-side domain validation
   const validateForm = (): boolean => {

@@ -31,6 +31,9 @@ import { DashboardSkeleton } from "./dashboard-skeleton";
 import { DashboardEmptyState } from "./dashboard-empty-state";
 import { DashboardErrorState } from "./dashboard-error-state";
 import { DashboardCustomizeModal } from "./dashboard-customize-modal";
+import { AccountCreateModal } from "@/components/accounts/account-create-modal";
+import { AccountDeleteModal } from "@/components/accounts/account-delete-modal";
+import type { TradingAccountDto as ClientTradingAccountDto } from "@/lib/client/accounts";
 import { AiInsightsPanel } from "@/components/ai/ai-insights-panel";
 import { useSettings } from "@/components/settings/settings-provider";
 import { DEFAULT_DASHBOARD_LAYOUT } from "@/lib/trading/settings/types";
@@ -121,6 +124,36 @@ export function DashboardClientPage() {
     };
   }, [filters, reloadTrigger]);
 
+  const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState<ClientTradingAccountDto | null>(null);
+
+  const handleAccountCreated = (newAccount: ClientTradingAccountDto) => {
+    setIsAddAccountOpen(false);
+    updateUrlParams({
+      ...filters,
+      tradingAccountId: newAccount.id,
+    });
+    handleReload();
+  };
+
+  const handleAccountDeleted = (deletedId: string) => {
+    setDeletingAccount(null);
+    if (filters.tradingAccountId === deletedId) {
+      updateUrlParams({
+        ...filters,
+        tradingAccountId: undefined,
+      });
+    }
+    handleReload();
+  };
+
+  const handleDeleteSelectedAccount = (accountId: string) => {
+    const acc = dashboardData?.accounts.find((a) => a.id === accountId);
+    if (acc) {
+      setDeletingAccount(acc as unknown as ClientTradingAccountDto);
+    }
+  };
+
   const handleAccountChange = (accountId?: string) => {
     updateUrlParams({
       ...filters,
@@ -170,7 +203,12 @@ export function DashboardClientPage() {
         );
       case "accounts-card":
         return (
-          <DashboardAccountsCard key={id} accounts={dashboardData.accounts} />
+          <DashboardAccountsCard
+            key={id}
+            accounts={dashboardData.accounts}
+            onAddAccount={() => setIsAddAccountOpen(true)}
+            onDeleteAccount={(acc) => setDeletingAccount(acc as unknown as ClientTradingAccountDto)}
+          />
         );
       case "journal-preview":
         return (
@@ -180,7 +218,12 @@ export function DashboardClientPage() {
           />
         );
       case "quick-actions":
-        return <DashboardQuickActions key={id} />;
+        return (
+          <DashboardQuickActions
+            key={id}
+            selectedAccountId={filters.tradingAccountId}
+          />
+        );
       default:
         return null;
     }
@@ -203,6 +246,8 @@ export function DashboardClientPage() {
         onRefresh={handleReload}
         isRefreshing={isRefreshing}
         onCustomize={() => setIsCustomizeOpen(true)}
+        onAddAccount={() => setIsAddAccountOpen(true)}
+        onDeleteAccount={handleDeleteSelectedAccount}
       />
 
       {/* 2. Error State */}
@@ -233,6 +278,21 @@ export function DashboardClientPage() {
       <DashboardCustomizeModal
         isOpen={isCustomizeOpen}
         onClose={() => setIsCustomizeOpen(false)}
+      />
+
+      {/* 6. Add Account Modal */}
+      <AccountCreateModal
+        isOpen={isAddAccountOpen}
+        onClose={() => setIsAddAccountOpen(false)}
+        onSuccess={handleAccountCreated}
+      />
+
+      {/* 7. Delete Account Confirmation Modal */}
+      <AccountDeleteModal
+        isOpen={Boolean(deletingAccount)}
+        account={deletingAccount}
+        onClose={() => setDeletingAccount(null)}
+        onSuccess={handleAccountDeleted}
       />
     </div>
   );

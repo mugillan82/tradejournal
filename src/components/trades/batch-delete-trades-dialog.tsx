@@ -1,47 +1,53 @@
 /**
- * Delete Trade Confirmation Dialog
+ * Batch Delete Trades Confirmation Dialog
  *
- * Accessible confirmation modal before executing a destructive trade deletion.
- * Accessible with role="alertdialog", aria-modal="true", and Escape key listener.
+ * Accessible confirmation dialog for deleting multiple selected trades concurrently.
  */
 
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { AlertCircle, Trash2, RefreshCw } from "@/components/icons";
-import { deleteTradeClient, TradeClientApiError } from "@/lib/client/trades";
-import type { TradeDto } from "@/lib/trading/trade/types";
+import { deleteTradeClient } from "@/lib/client/trades";
 
-interface DeleteTradeDialogProps {
-  trade: TradeDto;
+interface BatchDeleteTradesDialogProps {
+  selectedIds: ReadonlyArray<string>;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess: (deletedIds: string[]) => void;
 }
 
-export function DeleteTradeDialog({ trade, isOpen, onClose, onSuccess }: DeleteTradeDialogProps) {
-  if (!isOpen) return null;
+export function BatchDeleteTradesDialog({
+  selectedIds,
+  isOpen,
+  onClose,
+  onSuccess,
+}: BatchDeleteTradesDialogProps) {
+  if (!isOpen || selectedIds.length === 0) return null;
 
-  return <DeleteTradeDialogContent trade={trade} onClose={onClose} onSuccess={onSuccess} />;
+  return (
+    <BatchDeleteTradesContent
+      selectedIds={selectedIds}
+      onClose={onClose}
+      onSuccess={onSuccess}
+    />
+  );
 }
 
-function DeleteTradeDialogContent({
-  trade,
+function BatchDeleteTradesContent({
+  selectedIds,
   onClose,
   onSuccess,
 }: {
-  trade: TradeDto;
+  selectedIds: ReadonlyArray<string>;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess: (deletedIds: string[]) => void;
 }) {
-  const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Focus cancel button on open
     cancelBtnRef.current?.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,25 +60,32 @@ function DeleteTradeDialogContent({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isDeleting, onClose]);
 
-  const handleDelete = async () => {
+  const handleDeleteAll = async () => {
     setIsDeleting(true);
     setError(null);
 
-    try {
-      await deleteTradeClient(trade.id);
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        router.push("/trades");
+    const successfulIds: string[] = [];
+    const failedIds: string[] = [];
+
+    for (const id of selectedIds) {
+      try {
+        await deleteTradeClient(id);
+        successfulIds.push(id);
+      } catch {
+        failedIds.push(id);
       }
+    }
+
+    setIsDeleting(false);
+
+    if (successfulIds.length > 0) {
+      onSuccess(successfulIds);
+    }
+
+    if (failedIds.length > 0) {
+      setError(`Failed to delete ${failedIds.length} trade(s). Please try again.`);
+    } else {
       onClose();
-    } catch (err: unknown) {
-      setIsDeleting(false);
-      setError(
-        err instanceof TradeClientApiError
-          ? err.message
-          : "An unexpected error occurred while deleting the trade.",
-      );
     }
   };
 
@@ -88,8 +101,8 @@ function DeleteTradeDialogContent({
       <div
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-desc"
+        aria-labelledby="batch-delete-dialog-title"
+        aria-describedby="batch-delete-dialog-desc"
         className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl space-y-5"
       >
         <div className="flex items-start gap-4">
@@ -97,15 +110,15 @@ function DeleteTradeDialogContent({
             <Trash2 size={20} />
           </div>
           <div className="flex-1">
-            <h2 id="delete-dialog-title" className="text-lg font-bold text-slate-100">
-              Delete Trade Record
+            <h2 id="batch-delete-dialog-title" className="text-lg font-bold text-slate-100">
+              Delete {selectedIds.length} Selected Trades
             </h2>
-            <p id="delete-dialog-desc" className="text-xs text-slate-400 mt-1 leading-relaxed">
+            <p id="batch-delete-dialog-desc" className="text-xs text-slate-400 mt-1 leading-relaxed">
               Are you sure you want to permanently delete{" "}
-              <span className="font-semibold text-slate-200">
-                {trade.title || `Trade #${trade.id.slice(0, 8)}`}
+              <span className="font-semibold text-rose-300">
+                {selectedIds.length} selected {selectedIds.length === 1 ? "trade" : "trades"}
               </span>
-              ? This action cannot be undone and will remove all associated execution and P&amp;L records.
+              ? This action cannot be undone and will permanently remove all associated execution and P&amp;L records.
             </p>
           </div>
         </div>
@@ -126,26 +139,26 @@ function DeleteTradeDialogContent({
             type="button"
             disabled={isDeleting}
             onClick={onClose}
-            className="rounded-lg border border-slate-800 bg-slate-950/80 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
-
           <button
             type="button"
             disabled={isDeleting}
-            onClick={handleDelete}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500 transition-colors disabled:opacity-50 shadow-lg shadow-rose-900/20"
+            onClick={handleDeleteAll}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium shadow-sm transition-colors disabled:opacity-50"
+            data-testid="confirm-batch-delete-btn"
           >
             {isDeleting ? (
               <>
                 <RefreshCw size={14} className="animate-spin" />
-                <span>Deleting...</span>
+                <span>Deleting {selectedIds.length} trades...</span>
               </>
             ) : (
               <>
                 <Trash2 size={14} />
-                <span>Delete Trade</span>
+                <span>Delete {selectedIds.length} {selectedIds.length === 1 ? "Trade" : "Trades"}</span>
               </>
             )}
           </button>

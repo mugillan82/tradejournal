@@ -52,6 +52,7 @@ import type {
 // ---------------------------------------------------------------------------
 const MAX_PAGE_SIZE = 200;
 const DEFAULT_PAGE_SIZE = 50;
+const ZERO_DECIMAL = new Prisma.Decimal(0);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -291,6 +292,27 @@ export async function createTrade(
   const status: TradeStatus = input.status ?? TradeStatus.OPEN;
 
   try {
+    const grossPnlDec = decimalFromString(input.grossPnl);
+    const commDec = decimalFromString(input.commission) ?? ZERO_DECIMAL;
+    const feesDec = decimalFromString(input.fees) ?? ZERO_DECIMAL;
+    const swapDec = decimalFromString(input.swap) ?? ZERO_DECIMAL;
+
+    let netPnlDec = decimalFromString(input.netPnl);
+    let finalGrossPnlDec = grossPnlDec;
+
+    if (netPnlDec === null && grossPnlDec !== null) {
+      netPnlDec = grossPnlDec.minus(commDec).minus(feesDec).plus(swapDec);
+    } else if (finalGrossPnlDec === null && netPnlDec !== null) {
+      finalGrossPnlDec = netPnlDec.plus(commDec).plus(feesDec).minus(swapDec);
+    }
+
+    const entryDate = input.entryDate instanceof Date ? input.entryDate : new Date(input.entryDate);
+    const exitDate = input.exitDate
+      ? input.exitDate instanceof Date
+        ? input.exitDate
+        : new Date(input.exitDate)
+      : null;
+
     const record = await prisma.trade.create({
       data: {
         userId,
@@ -298,19 +320,19 @@ export async function createTrade(
         side: input.side,
         status,
         entryPrice: decimalFromString(input.entryPrice)!,
-        entryDate: input.entryDate,
+        entryDate,
         exitPrice: decimalFromString(input.exitPrice),
-        exitDate: input.exitDate ?? null,
+        exitDate,
         stopLoss: decimalFromString(input.stopLoss),
         takeProfit: decimalFromString(input.takeProfit),
         riskAmount: decimalFromString(input.riskAmount),
         plannedRiskReward: decimalFromString(input.plannedRiskReward),
         quantity: decimalFromString(input.quantity)!,
-        grossPnl: decimalFromString(input.grossPnl),
+        grossPnl: finalGrossPnlDec,
         commission: decimalFromString(input.commission),
         fees: decimalFromString(input.fees),
         swap: decimalFromString(input.swap),
-        netPnl: decimalFromString(input.netPnl),
+        netPnl: netPnlDec,
         title: input.title ?? null,
         notes: input.notes ?? null,
         strategyId: input.strategyId ?? null,
@@ -443,11 +465,22 @@ export async function updateTrade(
   // Apply patch in-memory to check cross-field invariants on the merged shape.
   const mergedStatus: TradeStatusValue =
     (input.status as TradeStatusValue | undefined) ?? (existing.status as TradeStatusValue);
-  const mergedEntryDate: Date = input.entryDate ?? existing.entryDate;
+  const mergedEntryDate =
+    input.entryDate !== undefined
+      ? input.entryDate instanceof Date
+        ? input.entryDate
+        : new Date(input.entryDate)
+      : existing.entryDate;
   const mergedExitPrice =
     input.exitPrice !== undefined ? input.exitPrice : decimalToString(existing.exitPrice);
   const mergedExitDate =
-    input.exitDate !== undefined ? input.exitDate : existing.exitDate;
+    input.exitDate !== undefined
+      ? input.exitDate === null
+        ? null
+        : input.exitDate instanceof Date
+          ? input.exitDate
+          : new Date(input.exitDate)
+      : existing.exitDate;
 
   const merged = validateMergedTradeShape({
     status: mergedStatus,
@@ -466,12 +499,19 @@ export async function updateTrade(
   if (input.entryPrice !== undefined) {
     data.entryPrice = decimalFromString(input.entryPrice)!;
   }
-  if (input.entryDate !== undefined) data.entryDate = input.entryDate;
+  if (input.entryDate !== undefined) {
+    data.entryDate = input.entryDate instanceof Date ? input.entryDate : new Date(input.entryDate);
+  }
   if (input.exitPrice !== undefined) {
     data.exitPrice = decimalFromString(input.exitPrice);
   }
   if (input.exitDate !== undefined) {
-    data.exitDate = input.exitDate ?? null;
+    data.exitDate =
+      input.exitDate === null
+        ? null
+        : input.exitDate instanceof Date
+          ? input.exitDate
+          : new Date(input.exitDate);
   }
   if (input.stopLoss !== undefined) {
     data.stopLoss = decimalFromString(input.stopLoss);

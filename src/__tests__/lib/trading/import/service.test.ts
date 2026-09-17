@@ -200,7 +200,7 @@ describe("Import Service Hardening", () => {
       const passedInput = vi.mocked(tradeService.createTrade).mock.calls[0][0];
       expect(passedInput.status).toBe("CLOSED");
       expect(passedInput.exitDate).toBeDefined();
-      expect(passedInput.exitDate?.toISOString()).toBe(new Date("2026-09-02T04:24:00Z").toISOString());
+      expect(new Date(passedInput.exitDate!).toISOString()).toBe(new Date("2026-09-02T04:24:00Z").toISOString());
       expect(passedInput.grossPnl).toBe("-268.55");
       expect(passedInput.commission).toBe("0.50");
     });

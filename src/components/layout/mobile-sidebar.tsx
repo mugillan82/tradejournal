@@ -1,13 +1,11 @@
 /**
- * Mobile sidebar drawer
+ * Mobile Sidebar Drawer — Stitch Obsidian Orbit Edition
  *
  * Slide-in navigation drawer used on small viewports.
- * - Closes on Escape key
- * - Closes on backdrop click
- * - Closes when a link is clicked
- * - Locks body scroll while open
- * - Returns focus to the trigger on close
- * - Traps focus inside the drawer
+ * Features:
+ * - Obsidian dark glass backdrop and panel
+ * - Orbit badges and active item beacons
+ * - Accessible focus trap and ESC / backdrop dismissal
  */
 
 "use client";
@@ -25,10 +23,8 @@ import {
 import { createPortal } from "react-dom";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { navigation, type NavSection } from "@/lib/navigation";
-import { Menu, X } from "@/components/icons";
+import { Menu, X, Sparkles, Search } from "@/components/icons";
 
-// Stable trigger button — same JSX before and after hydration so
-// the SSR markup and the client first-render match exactly.
 function TriggerButton({
   open,
   titleId,
@@ -45,7 +41,7 @@ function TriggerButton({
       aria-label="Open navigation"
       aria-expanded={open}
       aria-controls={titleId}
-      className="lg:hidden inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+      className="lg:hidden inline-flex items-center justify-center rounded-lg p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800/70 border border-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60"
     >
       <Menu size={20} strokeWidth={2} />
     </button>
@@ -55,12 +51,9 @@ function TriggerButton({
 interface MobileSidebarProps {
   /** Authenticated user display name (shown in the drawer footer). */
   userDisplayName?: string;
+  onOpenCommandPalette?: () => void;
 }
 
-/**
- * Hook for trapping focus within a container element.
- * Restores focus to the previously focused element on cleanup.
- */
 function useFocusTrap(
   active: boolean,
   containerRef: React.RefObject<HTMLElement | null>,
@@ -97,7 +90,6 @@ function useFocusTrap(
       }
     }
 
-    // Initial focus
     const focusable = getFocusable();
     focusable[0]?.focus();
 
@@ -123,34 +115,43 @@ function DrawerItem({ item, onNavigate }: DrawerItemProps) {
   const pathname = usePathname();
   const isActive = pathname.toLowerCase() === item.href.toLowerCase();
   const Icon = item.icon;
+  const isAiItem = item.href.includes("smart");
 
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
       className={[
-        "flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-sm transition-colors duration-100",
+        "flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm transition-all duration-150",
         isActive
-          ? "bg-emerald-500/10 text-emerald-400 font-medium"
-          : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60",
+          ? "bg-purple-500/15 text-purple-200 font-semibold border border-purple-500/30 shadow-sm shadow-purple-950"
+          : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent",
       ].join(" ")}
       aria-current={isActive ? "page" : undefined}
     >
       <span className="flex items-center gap-2.5">
         <Icon
-          size={16}
-          strokeWidth={1.75}
+          size={17}
+          strokeWidth={isActive ? 2 : 1.75}
           className={
             isActive
-              ? "text-emerald-400 flex-shrink-0"
-              : "text-slate-500 flex-shrink-0"
+              ? "text-purple-400 flex-shrink-0"
+              : "text-slate-400 flex-shrink-0"
           }
           aria-hidden="true"
         />
         <span>{item.label}</span>
       </span>
+      {isAiItem && (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+          <Sparkles size={10} className="text-purple-400" />
+          AI
+        </span>
+      )}
       {item.status === "coming-soon" && (
-        <span className="text-[10px] font-medium text-slate-600">Soon</span>
+        <span className="text-[10px] font-medium text-slate-500 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">
+          Soon
+        </span>
       )}
     </Link>
   );
@@ -160,10 +161,12 @@ function DrawerContent({
   userDisplayName,
   onClose,
   drawerRef,
+  onOpenCommandPalette,
 }: {
   userDisplayName?: string;
   onClose: () => void;
   drawerRef: React.RefObject<HTMLDivElement | null>;
+  onOpenCommandPalette?: () => void;
 }) {
   return (
     <div
@@ -171,26 +174,48 @@ function DrawerContent({
       role="dialog"
       aria-modal="true"
       aria-label="Main navigation"
-      className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-slate-950 border-r border-slate-800 shadow-2xl shadow-black/40"
+      className="fixed inset-y-0 left-0 z-50 flex w-76 max-w-[85vw] flex-col bg-[#07050b] border-r border-white/10 shadow-2xl shadow-black/90"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-slate-800">
-        <BrandMark size="sm" />
+      <div className="flex items-center justify-between px-4 py-4 border-b border-white/[0.08] bg-[#090710]">
+        <BrandMark size="sm" showWordmark={true} />
         <button
           type="button"
           onClick={onClose}
           aria-label="Close navigation"
-          className="rounded-md p-1.5 text-slate-500 hover:text-slate-200 hover:bg-slate-800/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60"
+          className="rounded-lg p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60"
         >
           <X size={18} strokeWidth={2} />
         </button>
       </div>
 
+      {/* Quick search shortcut */}
+      {onOpenCommandPalette && (
+        <div className="px-3 pt-3 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              onOpenCommandPalette();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-xs text-slate-300"
+          >
+            <span className="flex items-center gap-2">
+              <Search size={14} className="text-purple-400" />
+              Quick Command Search
+            </span>
+            <kbd className="font-mono text-[10px] bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 text-slate-400">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 overscroll-contain">
         {navigation.map((section: NavSection) => (
-          <div key={section.label} className="space-y-0.5">
-            <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+          <div key={section.label} className="space-y-1">
+            <p className="px-3 mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 select-none">
               {section.label}
             </p>
             {section.items.map((item) => (
@@ -204,17 +229,24 @@ function DrawerContent({
         ))}
       </nav>
 
-      {/* User footer */}
-      {userDisplayName && (
-        <div className="flex-shrink-0 border-t border-slate-800 px-4 py-3">
+      {/* Footer */}
+      <div className="flex-shrink-0 border-t border-white/[0.08] bg-[#090710] px-4 py-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="flex items-center gap-1.5 text-[10px] font-mono text-purple-400 font-semibold uppercase">
+            <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+            Orbit System
+          </span>
+          <span className="text-[10px] font-mono text-slate-500">v2.5</span>
+        </div>
+        {userDisplayName && (
           <p
-            className="truncate text-xs text-slate-500"
+            className="truncate text-xs text-slate-400"
             title={userDisplayName}
           >
             {userDisplayName}
           </p>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -223,13 +255,16 @@ function Backdrop({ onClose }: { onClose: () => void }) {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm"
+      className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150"
       aria-hidden="true"
     />
   );
 }
 
-export function MobileSidebar({ userDisplayName }: MobileSidebarProps) {
+export function MobileSidebar({
+  userDisplayName,
+  onOpenCommandPalette,
+}: MobileSidebarProps) {
   const [open, setOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -237,7 +272,6 @@ export function MobileSidebar({ userDisplayName }: MobileSidebarProps) {
 
   useFocusTrap(open, drawerRef);
 
-  // Lock body scroll while drawer is open
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
@@ -247,7 +281,6 @@ export function MobileSidebar({ userDisplayName }: MobileSidebarProps) {
     };
   }, [open]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     function handleKey(e: KeyboardEvent) {
@@ -260,25 +293,23 @@ export function MobileSidebar({ userDisplayName }: MobileSidebarProps) {
     return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
 
-  // When the trigger button is used, keep ref to it so we can return focus on close
   const openDrawer = useCallback(() => {
     triggerRef.current = document.activeElement as HTMLButtonElement | null;
     setOpen(true);
   }, []);
 
-  // Build portal content only after hydration. We check typeof document
-  // at render time so the trigger button renders identically on SSR
-  // and the first client render.
-  const portalContent: ReactNode = open && typeof document !== "undefined" ? (
-    <>
-      <Backdrop onClose={() => setOpen(false)} />
-      <DrawerContent
-        userDisplayName={userDisplayName}
-        onClose={() => setOpen(false)}
-        drawerRef={drawerRef}
-      />
-    </>
-  ) : null;
+  const portalContent: ReactNode =
+    open && typeof document !== "undefined" ? (
+      <>
+        <Backdrop onClose={() => setOpen(false)} />
+        <DrawerContent
+          userDisplayName={userDisplayName}
+          onClose={() => setOpen(false)}
+          drawerRef={drawerRef}
+          onOpenCommandPalette={onOpenCommandPalette}
+        />
+      </>
+    ) : null;
 
   return (
     <>

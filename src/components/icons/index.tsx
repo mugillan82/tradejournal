@@ -506,6 +506,14 @@ export function Plus({ size, strokeWidth, ...props }: IconProps) {
   );
 }
 
+export function Minus({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M5 12h14" />
+    </Icon>
+  );
+}
+
 export function Tag({ size, strokeWidth, ...props }: IconProps) {
   return (
     <Icon size={size} strokeWidth={strokeWidth} {...props}>
@@ -757,6 +765,26 @@ export function Keyboard({ size, strokeWidth, ...props }: IconProps) {
       <path d="M14 12h.001" />
       <path d="M18 12h.001" />
       <path d="M8 16h8" />
+    </Icon>
+  );
+}
+
+export function Shield({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+    </Icon>
+  );
+}
+
+export function Sparkles({ size, strokeWidth, ...props }: IconProps) {
+  return (
+    <Icon size={size} strokeWidth={strokeWidth} {...props}>
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+      <path d="M5 3v4" />
+      <path d="M19 17v4" />
+      <path d="M3 5h4" />
+      <path d="M17 19h4" />
     </Icon>
   );
 }

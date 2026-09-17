@@ -26,6 +26,7 @@ import * as clientTrades from "@/lib/client/trades";
 import { TradeClientApiError } from "@/lib/client/trades";
 
 const mockPush = vi.fn();
+let mockSearchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
@@ -33,6 +34,7 @@ vi.mock("next/navigation", () => ({
     prefetch: vi.fn(),
     back: vi.fn(),
   }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 const mockAccounts = [
@@ -77,6 +79,7 @@ const mockAccounts = [
 describe("AddTradeForm Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
     vi.spyOn(clientTrades, "fetchTradingAccounts").mockResolvedValue(mockAccounts);
   });
 
@@ -90,6 +93,15 @@ describe("AddTradeForm Component", () => {
     const select = screen.getByLabelText(/trading account/i) as HTMLSelectElement;
     expect(select.options.length).toBe(3);
     expect(select.value).toBe("acc_active_1");
+  });
+
+  it("pre-selects trading account when specified in URL search params", async () => {
+    mockSearchParams = new URLSearchParams("tradingAccountId=acc_active_2");
+    render(<AddTradeForm />);
+
+    expect(await screen.findByLabelText(/trading account/i)).toBeDefined();
+    const select = screen.getByLabelText(/trading account/i) as HTMLSelectElement;
+    expect(select.value).toBe("acc_active_2");
   });
 
   it("renders empty account state guiding to /accounts if user has no trading accounts", async () => {

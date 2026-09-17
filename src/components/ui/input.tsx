@@ -43,11 +43,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           className={[
             "w-full rounded-lg border bg-slate-900/70 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500",
             "transition-colors duration-150",
-            "focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-500/60",
+            "focus:outline-none focus:ring-2 focus:ring-purple-500/60 focus:border-purple-500/60",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             error
               ? "border-red-500/60 focus:ring-red-500/40 focus:border-red-500/60"
-              : "border-slate-700 hover:border-slate-600",
+              : "border-slate-700 hover:border-slate-600 focus:border-purple-500/60",
             className,
           ]
             .filter(Boolean)

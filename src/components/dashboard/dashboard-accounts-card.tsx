@@ -7,11 +7,13 @@
 "use client";
 
 import React from "react";
-import { Wallet, ShieldCheck } from "@/components/icons";
+import { Wallet, ShieldCheck, Plus, Trash2 } from "@/components/icons";
 import type { TradingAccountDto } from "@/lib/client/dashboard";
 
 interface DashboardAccountsCardProps {
   accounts: ReadonlyArray<TradingAccountDto>;
+  onAddAccount?: () => void;
+  onDeleteAccount?: (account: TradingAccountDto) => void;
 }
 
 function formatCurrency(valStr: string | null | undefined, currency = "USD"): string {
@@ -24,7 +26,11 @@ function formatCurrency(valStr: string | null | undefined, currency = "USD"): st
   }).format(num);
 }
 
-export function DashboardAccountsCard({ accounts }: DashboardAccountsCardProps) {
+export function DashboardAccountsCard({
+  accounts,
+  onAddAccount,
+  onDeleteAccount,
+}: DashboardAccountsCardProps) {
   return (
     <div
       className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 shadow-sm space-y-4"
@@ -37,9 +43,23 @@ export function DashboardAccountsCard({ accounts }: DashboardAccountsCardProps) 
             Trading Accounts
           </h2>
         </div>
-        <span className="text-xs text-slate-400">
-          {accounts.length} Active {accounts.length === 1 ? "Account" : "Accounts"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">
+            {accounts.length} Active {accounts.length === 1 ? "Account" : "Accounts"}
+          </span>
+          {onAddAccount && (
+            <button
+              type="button"
+              onClick={onAddAccount}
+              title="Add new trading account"
+              aria-label="Add new trading account"
+              data-testid="accounts-card-add-account-btn"
+              className="p-1 rounded-md border border-slate-800 bg-slate-900 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              <Plus size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {accounts.length === 0 ? (
@@ -71,15 +91,30 @@ export function DashboardAccountsCard({ accounts }: DashboardAccountsCardProps) 
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-xs font-bold text-slate-200 font-mono">
-                  {acc.currentBalance
-                    ? formatCurrency(acc.currentBalance, acc.currency)
-                    : formatCurrency(acc.initialBalance, acc.currency)}
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-xs font-bold text-slate-200 font-mono">
+                    {acc.currentBalance
+                      ? formatCurrency(acc.currentBalance, acc.currency)
+                      : formatCurrency(acc.initialBalance, acc.currency)}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {acc.currentBalance ? "Current Balance" : "Initial Balance"}
+                  </div>
                 </div>
-                <div className="text-[10px] text-slate-500">
-                  {acc.currentBalance ? "Current Balance" : "Initial Balance"}
-                </div>
+
+                {onDeleteAccount && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteAccount(acc)}
+                    title={`Delete ${acc.name}`}
+                    aria-label={`Delete ${acc.name}`}
+                    data-testid={`delete-account-btn-${acc.id}`}
+                    className="p-1.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
               </div>
             </div>
           ))}

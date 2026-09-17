@@ -1,17 +1,20 @@
 /**
- * AppShell
+ * AppShell — Stitch Obsidian Orbit Application Shell
  *
- * The authenticated application layout wrapper.
- * Provides the sidebar (desktop) + topbar structure used by all
- * protected application routes.
- *
- * - Sidebar is visible on large viewports (≥1024px).
- * - Mobile navigation is handled by MobileSidebar in the Topbar.
- * - Topbar is always visible and includes the user menu.
+ * Authenticated application layout wrapper.
+ * Provides:
+ * - Desktop Obsidian sidebar + Mobile slide drawer
+ * - Orbital Topbar with telemetry and quick actions
+ * - Global Command Palette (⌘K / Ctrl+K)
+ * - Ambient cosmic background canvas
  */
 
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { CommandPalette } from "./command-palette";
 
 interface AppShellProps {
   /** Authenticated user display name (shown in sidebar footer and user menu). */
@@ -30,30 +33,69 @@ export function AppShell({
   pageTitle,
   children,
 }: AppShellProps) {
+  const [isCommandOpen, setIsCommandOpen] = useState(false);
+
+  const openCommandPalette = useCallback(() => {
+    setIsCommandOpen(true);
+  }, []);
+
+  const closeCommandPalette = useCallback(() => {
+    setIsCommandOpen(false);
+  }, []);
+
+  // Global keyboard shortcut listener for ⌘K / Ctrl+K
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandOpen((prev) => !prev);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950">
-      {/* Desktop sidebar — hidden on < lg */}
-      <div className="hidden lg:flex lg:flex-shrink-0">
-        <Sidebar userDisplayName={userDisplayName ?? undefined} />
+    <div className="flex h-screen overflow-hidden bg-[#06040a] text-slate-100 relative selection:bg-purple-500/30">
+      {/* Ambient Cosmic Background Lighting */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] rounded-full bg-purple-500/[0.045] blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] rounded-full bg-violet-600/[0.035] blur-[140px]" />
       </div>
 
-      {/* Main content area */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      {/* Desktop Sidebar — hidden on < lg */}
+      <div className="hidden lg:flex lg:flex-shrink-0 relative z-20">
+        <Sidebar
+          userDisplayName={userDisplayName ?? undefined}
+          onOpenCommandPalette={openCommandPalette}
+        />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative z-10">
         <Topbar
           userDisplayName={userDisplayName}
           userEmail={userEmail}
           pageTitle={pageTitle}
+          onOpenCommandPalette={openCommandPalette}
         />
 
-        {/* Scrollable page content */}
+        {/* Scrollable Page Content */}
         <main
-          className="flex-1 overflow-y-auto"
+          className="flex-1 overflow-y-auto relative focus:outline-none"
           id="main-content"
           tabIndex={-1}
         >
           {children}
         </main>
       </div>
+
+      {/* Global Command Palette Launcher */}
+      <CommandPalette
+        isOpen={isCommandOpen}
+        onClose={closeCommandPalette}
+      />
     </div>
   );
 }

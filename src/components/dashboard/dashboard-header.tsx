@@ -7,7 +7,7 @@
 "use client";
 
 import React from "react";
-import { RefreshCw, LayoutDashboard, Sliders } from "@/components/icons";
+import { RefreshCw, LayoutDashboard, Sliders, Plus, Minus } from "@/components/icons";
 import type { TradingAccountDto } from "@/lib/client/dashboard";
 
 interface DashboardHeaderProps {
@@ -17,6 +17,8 @@ interface DashboardHeaderProps {
   onRefresh: () => void;
   isRefreshing?: boolean;
   onCustomize?: () => void;
+  onAddAccount?: () => void;
+  onDeleteAccount?: (accountId: string) => void;
 }
 
 export function DashboardHeader({
@@ -26,6 +28,8 @@ export function DashboardHeader({
   onRefresh,
   isRefreshing = false,
   onCustomize,
+  onAddAccount,
+  onDeleteAccount,
 }: DashboardHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
@@ -46,27 +50,57 @@ export function DashboardHeader({
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Account Selector */}
-        {accounts.length > 0 && (
-          <div className="relative">
-            <label htmlFor="dashboard-account-select" className="sr-only">
-              Filter by Trading Account
-            </label>
-            <select
-              id="dashboard-account-select"
-              value={selectedAccountId || ""}
-              onChange={(e) => onAccountChange(e.target.value ? e.target.value : undefined)}
-              className="bg-slate-900/90 border border-slate-800 text-slate-200 text-xs sm:text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+        {/* Account Selector + Add / Remove Controls */}
+        <div className="flex items-center gap-1.5">
+          {accounts.length > 0 && (
+            <div className="relative">
+              <label htmlFor="dashboard-account-select" className="sr-only">
+                Filter by Trading Account
+              </label>
+              <select
+                id="dashboard-account-select"
+                value={selectedAccountId || ""}
+                onChange={(e) => onAccountChange(e.target.value ? e.target.value : undefined)}
+                className="bg-slate-900/90 border border-slate-800 text-slate-200 text-xs sm:text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              >
+                <option value="">All Accounts ({accounts.length})</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.currency})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Quick Add Account (+) Button */}
+          {onAddAccount && (
+            <button
+              type="button"
+              onClick={onAddAccount}
+              title="Add new trading account"
+              aria-label="Add new trading account"
+              data-testid="dashboard-add-account-btn"
+              className="p-2 rounded-lg border border-slate-800 bg-slate-900/80 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 transition-colors"
             >
-              <option value="">All Accounts ({accounts.length})</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.currency})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+              <Plus size={14} />
+            </button>
+          )}
+
+          {/* Quick Delete Account (-) Button */}
+          {onDeleteAccount && selectedAccountId && (
+            <button
+              type="button"
+              onClick={() => onDeleteAccount(selectedAccountId)}
+              title="Delete selected trading account"
+              aria-label="Delete selected trading account"
+              data-testid="dashboard-delete-account-btn"
+              className="p-2 rounded-lg border border-rose-900/40 bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 transition-colors"
+            >
+              <Minus size={14} />
+            </button>
+          )}
+        </div>
 
         {/* Customize Layout Button */}
         {onCustomize && (

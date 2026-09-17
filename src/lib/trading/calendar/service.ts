@@ -283,8 +283,8 @@ export async function getMonthCalendar(
 
     dayData.tradeCount++;
 
-    const tradeNetPnl = trade.netPnl ?? ZERO_DECIMAL;
-    const tradeGrossPnl = trade.grossPnl ?? tradeNetPnl;
+    const tradeNetPnl = trade.netPnl ?? trade.grossPnl ?? ZERO_DECIMAL;
+    const tradeGrossPnl = trade.grossPnl ?? trade.netPnl ?? ZERO_DECIMAL;
 
     if (trade.riskAmount) {
       totalRisk = totalRisk.plus(trade.riskAmount);
@@ -329,8 +329,8 @@ export async function getMonthCalendar(
       entryPrice: trade.entryPrice.toFixed(8),
       exitPrice: trade.exitPrice ? trade.exitPrice.toFixed(8) : null,
       quantity: trade.quantity.toFixed(8),
-      grossPnl: trade.grossPnl ? trade.grossPnl.toFixed(2) : null,
-      netPnl: trade.netPnl ? trade.netPnl.toFixed(2) : null,
+      grossPnl: (trade.grossPnl ?? trade.netPnl) ? (trade.grossPnl ?? trade.netPnl)!.toFixed(2) : null,
+      netPnl: (trade.netPnl ?? trade.grossPnl) ? (trade.netPnl ?? trade.grossPnl)!.toFixed(2) : null,
       actualRMultiple: trade.actualRMultiple ? trade.actualRMultiple.toFixed(2) : null,
       riskAmount: trade.riskAmount ? trade.riskAmount.toFixed(2) : null,
       tradingAccount: {

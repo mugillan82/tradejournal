@@ -47,10 +47,19 @@ export function CalendarClientPage() {
   const { month, filters } = useMemo(() => {
     const params = new URLSearchParams(searchParamsString);
     const rawMonth = params.get("month");
-    const validMonth =
+    const rawDate = params.get("date");
+    let validMonth =
       rawMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(rawMonth)
         ? rawMonth
-        : getCurrentUtcMonth();
+        : null;
+
+    if (!validMonth && rawDate && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(rawDate)) {
+      validMonth = rawDate.slice(0, 7);
+    }
+
+    if (!validMonth) {
+      validMonth = getCurrentUtcMonth();
+    }
 
     const filterObj: CalendarFilterInput = {
       tradingAccountId: params.get("tradingAccountId") || undefined,
@@ -67,7 +76,24 @@ export function CalendarClientPage() {
   }, [searchParamsString]);
 
   const [calendarData, setCalendarData] = useState<MonthCalendarDto | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const urlDate = useMemo(() => {
+    const params = new URLSearchParams(searchParamsString);
+    const rawDate = params.get("date");
+    return rawDate && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(rawDate)
+      ? rawDate
+      : null;
+  }, [searchParamsString]);
+
+  const [userSelectedDate, setUserSelectedDate] = useState<string | null | undefined>(undefined);
+  const [prevUrlDate, setPrevUrlDate] = useState<string | null>(urlDate);
+
+  if (urlDate !== prevUrlDate) {
+    setPrevUrlDate(urlDate);
+    setUserSelectedDate(undefined);
+  }
+
+  const selectedDate = userSelectedDate !== undefined ? userSelectedDate : urlDate;
   const [filterOptions, setFilterOptions] = useState<{
     accounts: FilterOptionItem[];
     strategies: FilterOptionItem[];
@@ -146,7 +172,7 @@ export function CalendarClientPage() {
   }, [month, filters, reloadTrigger]);
 
   const handleMonthChange = (newMonth: string) => {
-    setSelectedDate(null);
+    setUserSelectedDate(null);
     updateUrlParams(newMonth, filters);
   };
 
@@ -231,7 +257,7 @@ export function CalendarClientPage() {
                   month={month}
                   days={calendarData.days}
                   selectedDate={selectedDate}
-                  onSelectDate={(date) => setSelectedDate((prev) => (prev === date ? null : date))}
+                  onSelectDate={(date) => setUserSelectedDate((prev) => ((prev !== undefined ? prev : urlDate) === date ? null : date))}
                   bestDayDate={calendarData.summary.bestDay?.date ?? null}
                   worstDayDate={calendarData.summary.worstDay?.date ?? null}
                 />
@@ -243,7 +269,7 @@ export function CalendarClientPage() {
                   <CalendarDayDetailPanel
                     day={selectedDayData}
                     dateStr={selectedDate}
-                    onClose={() => setSelectedDate(null)}
+                    onClose={() => setUserSelectedDate(null)}
                   />
                 </div>
               )}

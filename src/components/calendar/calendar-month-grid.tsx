@@ -115,9 +115,9 @@ export function CalendarMonthGrid({
               key={dateStr}
               type="button"
               onClick={() => onSelectDate(dateStr)}
-              className={`min-h-[90px] sm:min-h-[110px] p-2 sm:p-2.5 text-left flex flex-col justify-between transition-all relative group focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
+              className={`min-h-[90px] sm:min-h-[110px] p-2 sm:p-2.5 text-left flex flex-col justify-between transition-all relative group focus:outline-none focus:ring-1 focus:ring-purple-500 ${
                 isSelected
-                  ? "bg-slate-800 ring-2 ring-indigo-500 z-10"
+                  ? "bg-slate-800 ring-2 ring-purple-500 z-10 shadow-[0_0_12px_rgba(168,85,247,0.25)]"
                   : hasTrades
                     ? isPnlPositive
                       ? "bg-emerald-950/20 hover:bg-emerald-950/30"
@@ -133,9 +133,9 @@ export function CalendarMonthGrid({
                 <span
                   className={`text-xs font-mono font-medium ${
                     isToday
-                      ? "px-1.5 py-0.5 rounded-full bg-indigo-600 text-white font-bold"
+                      ? "px-1.5 py-0.5 rounded-full bg-purple-600 text-white font-bold"
                       : isSelected
-                        ? "text-indigo-400 font-bold"
+                        ? "text-purple-300 font-bold"
                         : "text-slate-300"
                   }`}
                 >

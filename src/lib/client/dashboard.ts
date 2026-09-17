@@ -97,6 +97,7 @@ export async function fetchDashboardOverview(
     headers: {
       Accept: "application/json",
     },
+    cache: "no-store",
     signal,
   });
 

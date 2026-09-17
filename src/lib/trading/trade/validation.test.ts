@@ -86,6 +86,18 @@ describe("validateCreateTradeInput — valid trade", () => {
     });
     expect(result.isValid).toBe(true);
   });
+
+  it("passes when entryDate and exitDate are valid ISO/local date strings", () => {
+    const result = validateCreateTradeInput({
+      ...makeValidCreateTrade(),
+      entryDate: "2026-09-15T16:00:00.000Z",
+      status: "CLOSED",
+      exitPrice: "105.00",
+      exitDate: "2026-09-15T17:12:00.000Z",
+    });
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

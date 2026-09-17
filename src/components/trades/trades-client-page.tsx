@@ -32,7 +32,9 @@ import { TradePagination } from "./trade-pagination";
 import { TradeSkeleton } from "./trade-skeleton";
 import { TradeEmptyState } from "./trade-empty-state";
 import { TradeErrorState } from "./trade-error-state";
-import { PlusCircle, Download } from "@/components/icons";
+import { DeleteTradeDialog } from "./delete-trade-dialog";
+import { BatchDeleteTradesDialog } from "./batch-delete-trades-dialog";
+import { PlusCircle, Download, Trash2, X } from "@/components/icons";
 
 const DEBOUNCE_MS = 300;
 
@@ -70,6 +72,10 @@ export function TradesClientPage() {
   const [trades, setTrades] = useState<ReadonlyArray<TradeDto>>([]);
   const [accounts, setAccounts] = useState<ReadonlyArray<TradingAccountDto>>([]);
   const [total, setTotal] = useState(0);
+
+  const [selectedTradeIds, setSelectedTradeIds] = useState<Set<string>>(new Set());
+  const [deletingTrade, setDeletingTrade] = useState<TradeDto | null>(null);
+  const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -236,6 +242,57 @@ export function TradesClientPage() {
     updateUrlParams(filters, sortField, sortDirection, 1, newPageSize);
   };
 
+  // Selection handlers
+  const handleToggleSelectTrade = (id: string) => {
+    setSelectedTradeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedTradeIds.size === trades.length && trades.length > 0) {
+      setSelectedTradeIds(new Set());
+    } else {
+      setSelectedTradeIds(new Set(trades.map((t) => t.id)));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTradeIds(new Set());
+  };
+
+  const handleSingleTradeDeleted = () => {
+    if (deletingTrade) {
+      const idToRemove = deletingTrade.id;
+      setTrades((prev) => prev.filter((t) => t.id !== idToRemove));
+      setSelectedTradeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(idToRemove);
+        return next;
+      });
+      setTotal((prev) => Math.max(0, prev - 1));
+      setDeletingTrade(null);
+    }
+  };
+
+  const handleBatchTradesDeleted = (deletedIds: string[]) => {
+    const deletedSet = new Set(deletedIds);
+    setTrades((prev) => prev.filter((t) => !deletedSet.has(t.id)));
+    setSelectedTradeIds((prev) => {
+      const next = new Set(prev);
+      deletedIds.forEach((id) => next.delete(id));
+      return next;
+    });
+    setTotal((prev) => Math.max(0, prev - deletedIds.length));
+    setIsBatchDeleteOpen(false);
+  };
+
   const isFiltered = Boolean(
     filters.tradingAccountId ||
       filters.side ||
@@ -290,6 +347,41 @@ export function TradesClientPage() {
         onClearFilters={handleClearFilters}
       />
 
+      {/* Batch Selection Action Bar */}
+      {selectedTradeIds.size > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg border border-indigo-500/30 bg-indigo-950/40 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              {selectedTradeIds.size} selected
+            </span>
+            <p className="text-sm text-slate-300 hidden sm:inline">
+              {selectedTradeIds.size === 1
+                ? "1 trade selected for action"
+                : `${selectedTradeIds.size} trades selected for action`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsBatchDeleteOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 hover:border-rose-500/60 transition-colors"
+            >
+              <Trash2 size={14} />
+              <span>Delete Selected ({selectedTradeIds.size})</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleClearSelection}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+              title="Deselect all"
+            >
+              <X size={14} />
+              <span className="hidden sm:inline">Clear</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 4. Table / Cards Content Area */}
       {isLoading ? (
         <TradeSkeleton />
@@ -307,11 +399,21 @@ export function TradesClientPage() {
               sortField={sortField}
               sortDirection={sortDirection}
               onSortChange={handleSortChange}
+              selectedTradeIds={selectedTradeIds}
+              onToggleSelectTrade={handleToggleSelectTrade}
+              onToggleSelectAll={handleToggleSelectAll}
+              onDeleteTrade={(trade) => setDeletingTrade(trade)}
             />
           </div>
 
           {/* Mobile Cards View */}
-          <TradeCardList trades={trades} accounts={accounts} />
+          <TradeCardList
+            trades={trades}
+            accounts={accounts}
+            selectedTradeIds={selectedTradeIds}
+            onToggleSelectTrade={handleToggleSelectTrade}
+            onDeleteTrade={(trade) => setDeletingTrade(trade)}
+          />
 
           {/* 5. Pagination */}
           <TradePagination
@@ -323,6 +425,24 @@ export function TradesClientPage() {
           />
         </>
       )}
+
+      {/* Single Trade Deletion Dialog */}
+      {deletingTrade && (
+        <DeleteTradeDialog
+          trade={deletingTrade}
+          isOpen={Boolean(deletingTrade)}
+          onClose={() => setDeletingTrade(null)}
+          onSuccess={handleSingleTradeDeleted}
+        />
+      )}
+
+      {/* Batch Trades Deletion Dialog */}
+      <BatchDeleteTradesDialog
+        selectedIds={Array.from(selectedTradeIds)}
+        isOpen={isBatchDeleteOpen}
+        onClose={() => setIsBatchDeleteOpen(false)}
+        onSuccess={handleBatchTradesDeleted}
+      />
     </div>
   );
 }

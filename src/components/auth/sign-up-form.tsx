@@ -15,6 +15,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { signUp } from "@/lib/auth/client";
 import { getSafeRedirectPath } from "@/lib/auth/redirect";
 
@@ -184,6 +185,22 @@ export function SignUpForm() {
           {formError}
         </Alert>
       )}
+
+      <div className="space-y-4">
+        <GoogleSignInButton
+          text="Sign up with Google"
+          callbackUrl={safeRedirect ?? "/dashboard"}
+          disabled={submitting}
+          onError={(err) => setFormError(err)}
+        />
+
+        <div className="relative flex items-center justify-center">
+          <div className="w-full border-t border-slate-800" />
+          <span className="bg-slate-900 px-3 text-xs uppercase tracking-wider text-slate-500 font-medium absolute">
+            or register with email
+          </span>
+        </div>
+      </div>
 
       <form
         onSubmit={handleSubmit}

@@ -51,6 +51,14 @@ function formatDateUtc(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function getEffectiveNetPnl(trade: { netPnl: Prisma.Decimal | null; grossPnl?: Prisma.Decimal | null }): Prisma.Decimal {
+  return trade.netPnl ?? trade.grossPnl ?? ZERO_DECIMAL;
+}
+
+function getEffectiveGrossPnl(trade: { grossPnl: Prisma.Decimal | null; netPnl?: Prisma.Decimal | null }): Prisma.Decimal {
+  return trade.grossPnl ?? trade.netPnl ?? ZERO_DECIMAL;
+}
+
 /**
  * Computes analytics overview for an authenticated user.
  */
@@ -381,8 +389,8 @@ export function computeAnalytics(
   let countLosingR = 0;
 
   for (const trade of closedTradesList) {
-    const netPnl = trade.netPnl ?? ZERO_DECIMAL;
-    const grossPnl = trade.grossPnl ?? netPnl;
+    const netPnl = getEffectiveNetPnl(trade);
+    const grossPnl = getEffectiveGrossPnl(trade);
     const comm = trade.commission ?? ZERO_DECIMAL;
     const fees = trade.fees ?? ZERO_DECIMAL;
     const swap = trade.swap ?? ZERO_DECIMAL;
@@ -535,7 +543,7 @@ export function computeAnalytics(
   let currentLossStreak = 0;
 
   for (const trade of sortedClosedTrades) {
-    const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+    const netPnl = getEffectiveNetPnl(trade);
     if (netPnl.greaterThan(0)) {
       currentWinStreak++;
       currentLossStreak = 0;
@@ -558,26 +566,26 @@ export function computeAnalytics(
 
   if (sortedClosedTrades.length > 0) {
     const lastTrade = sortedClosedTrades[sortedClosedTrades.length - 1];
-    const lastPnl = lastTrade.netPnl ?? ZERO_DECIMAL;
+    const lastPnl = getEffectiveNetPnl(lastTrade);
 
     if (lastPnl.greaterThan(0)) {
       let count = 0;
       for (let i = sortedClosedTrades.length - 1; i >= 0; i--) {
-        if ((sortedClosedTrades[i].netPnl ?? ZERO_DECIMAL).greaterThan(0)) count++;
+        if (getEffectiveNetPnl(sortedClosedTrades[i]).greaterThan(0)) count++;
         else break;
       }
       currentStreak = { count, type: "WIN" };
     } else if (lastPnl.lessThan(0)) {
       let count = 0;
       for (let i = sortedClosedTrades.length - 1; i >= 0; i--) {
-        if ((sortedClosedTrades[i].netPnl ?? ZERO_DECIMAL).lessThan(0)) count++;
+        if (getEffectiveNetPnl(sortedClosedTrades[i]).lessThan(0)) count++;
         else break;
       }
       currentStreak = { count, type: "LOSS" };
     } else {
       let count = 0;
       for (let i = sortedClosedTrades.length - 1; i >= 0; i--) {
-        if ((sortedClosedTrades[i].netPnl ?? ZERO_DECIMAL).equals(0)) count++;
+        if (getEffectiveNetPnl(sortedClosedTrades[i]).equals(0)) count++;
         else break;
       }
       currentStreak = { count, type: "BREAKEVEN" };
@@ -593,7 +601,7 @@ export function computeAnalytics(
   let maxDrawdownPercentage: number | null = null;
 
   for (const trade of sortedClosedTrades) {
-    const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+    const netPnl = getEffectiveNetPnl(trade);
     cumulativePnl = cumulativePnl.plus(netPnl);
 
     if (cumulativePnl.greaterThan(peakCumPnl)) {
@@ -657,7 +665,7 @@ export function computeAnalytics(
       netPnl: ZERO_DECIMAL,
     };
     item.count++;
-    const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+    const netPnl = getEffectiveNetPnl(trade);
     item.netPnl = item.netPnl.plus(netPnl);
     if (netPnl.greaterThan(0)) item.wins++;
     else if (netPnl.lessThan(0)) item.losses++;
@@ -698,8 +706,8 @@ export function computeAnalytics(
       grossLoss: ZERO_DECIMAL,
     };
     item.count++;
-    const netPnl = trade.netPnl ?? ZERO_DECIMAL;
-    const grossPnl = trade.grossPnl ?? netPnl;
+    const netPnl = getEffectiveNetPnl(trade);
+    const grossPnl = getEffectiveGrossPnl(trade);
     item.netPnl = item.netPnl.plus(netPnl);
     if (netPnl.greaterThan(0)) {
       item.wins++;
@@ -752,7 +760,7 @@ export function computeAnalytics(
       netPnl: ZERO_DECIMAL,
     };
     item.count++;
-    const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+    const netPnl = getEffectiveNetPnl(trade);
     item.netPnl = item.netPnl.plus(netPnl);
     if (netPnl.greaterThan(0)) item.wins++;
     else if (netPnl.lessThan(0)) item.losses++;
@@ -794,7 +802,7 @@ export function computeAnalytics(
       netPnl: ZERO_DECIMAL,
     };
     item.count++;
-    const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+    const netPnl = getEffectiveNetPnl(trade);
     item.netPnl = item.netPnl.plus(netPnl);
     if (netPnl.greaterThan(0)) item.wins++;
     else if (netPnl.lessThan(0)) item.losses++;
@@ -839,7 +847,7 @@ export function computeAnalytics(
         netPnl: ZERO_DECIMAL,
       };
       item.count++;
-      const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+      const netPnl = getEffectiveNetPnl(trade);
       item.netPnl = item.netPnl.plus(netPnl);
       if (netPnl.greaterThan(0)) item.wins++;
       else if (netPnl.lessThan(0)) item.losses++;
@@ -882,7 +890,7 @@ export function computeAnalytics(
         totalLoss: ZERO_DECIMAL,
       };
       item.count++;
-      const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+      const netPnl = getEffectiveNetPnl(trade);
       item.netPnl = item.netPnl.plus(netPnl);
       if (netPnl.lessThan(0)) {
         item.totalLoss = item.totalLoss.plus(netPnl.abs());
@@ -924,7 +932,7 @@ export function computeAnalytics(
       netPnl: ZERO_DECIMAL,
     };
     item.count++;
-    const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+    const netPnl = getEffectiveNetPnl(trade);
     item.netPnl = item.netPnl.plus(netPnl);
     if (netPnl.greaterThan(0)) item.wins++;
     accountMap.set(acc.id, item);

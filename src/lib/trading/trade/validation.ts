@@ -181,14 +181,29 @@ function validateQuantity(value: unknown): FieldError | null {
   return null;
 }
 
+function parseDate(value: unknown): Date | null {
+  if (value === undefined || value === null) return null;
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const d = new Date(trimmed);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
 function validateDate(value: unknown, field: string): FieldError | null {
   if (value === undefined || value === null) {
     return { path: field, message: `${field} is required` };
   }
-  if (!(value instanceof Date)) {
-    return { path: field, message: `${field} must be a Date` };
+  if (typeof value !== "string" && !(value instanceof Date)) {
+    return { path: field, message: `${field} must be a valid date` };
   }
-  if (isNaN(value.getTime())) {
+  const d = parseDate(value);
+  if (!d) {
     return { path: field, message: `${field} must be a valid date` };
   }
   return null;
@@ -199,10 +214,11 @@ function validateOptionalDate(
   field: string,
 ): FieldError | null {
   if (value === undefined || value === null) return null; // nullable
-  if (!(value instanceof Date)) {
-    return { path: field, message: `${field} must be a Date` };
+  if (typeof value !== "string" && !(value instanceof Date)) {
+    return { path: field, message: `${field} must be a valid date` };
   }
-  if (isNaN(value.getTime())) {
+  const d = parseDate(value);
+  if (!d) {
     return { path: field, message: `${field} must be a valid date` };
   }
   return null;
@@ -289,7 +305,7 @@ function validateClosedTradeFields(
   status: TradeStatusValue,
   exitPrice: unknown,
   exitDate: unknown,
-  entryDate: Date,
+  entryDate: Date | string,
 ): FieldError | null {
   if (status !== "CLOSED") return null;
 
@@ -300,8 +316,11 @@ function validateClosedTradeFields(
     return { path: "exitDate", message: "exitDate is required when status is CLOSED" };
   }
 
-  if (exitDate instanceof Date && entryDate instanceof Date) {
-    if (exitDate < entryDate) {
+  const parsedExit = parseDate(exitDate);
+  const parsedEntry = parseDate(entryDate);
+
+  if (parsedExit && parsedEntry) {
+    if (parsedExit < parsedEntry) {
       return {
         path: "exitDate",
         message: "exitDate cannot be before entryDate",
@@ -317,14 +336,15 @@ function validateClosedTradeFields(
  * when both are provided.
  */
 function validateDateOrdering(
-  entryDate: Date,
+  entryDate: Date | string,
   exitDate: unknown,
 ): FieldError | null {
   if (exitDate === null || exitDate === undefined) return null;
-  if (!(exitDate instanceof Date)) return null;
-  if (isNaN(exitDate.getTime())) return null;
+  const parsedExit = parseDate(exitDate);
+  const parsedEntry = parseDate(entryDate);
+  if (!parsedExit || !parsedEntry) return null;
 
-  if (exitDate < entryDate) {
+  if (parsedExit < parsedEntry) {
     return {
       path: "exitDate",
       message: "exitDate cannot be before entryDate",
@@ -583,13 +603,10 @@ export function validateUpdateTradeInput(
 
   // Cross-field: when both entryDate and exitDate are updated together,
   // exitDate must not precede entryDate.
-  if (
-    data.entryDate instanceof Date &&
-    data.exitDate instanceof Date &&
-    !isNaN(data.entryDate.getTime()) &&
-    !isNaN(data.exitDate.getTime())
-  ) {
-    if (data.exitDate < data.entryDate) {
+  if (data.entryDate !== undefined && data.exitDate !== undefined && data.exitDate !== null) {
+    const parsedEntry = parseDate(data.entryDate);
+    const parsedExit = parseDate(data.exitDate);
+    if (parsedEntry && parsedExit && parsedExit < parsedEntry) {
       errors.push({
         path: "exitDate",
         message: "exitDate cannot be before entryDate",
@@ -610,7 +627,7 @@ export function validateUpdateTradeInput(
  */
 export function validateMergedTradeShape(params: {
   status: TradeStatusValue;
-  entryDate: Date;
+  entryDate: Date | string;
   exitPrice: unknown;
   exitDate: unknown;
 }): ValidationResult {
@@ -626,8 +643,11 @@ export function validateMergedTradeShape(params: {
     if (err) errors.push(err);
   }
 
-  if (params.exitDate instanceof Date && params.entryDate instanceof Date) {
-    if (params.exitDate < params.entryDate) {
+  const parsedExit = parseDate(params.exitDate);
+  const parsedEntry = parseDate(params.entryDate);
+
+  if (parsedExit && parsedEntry) {
+    if (parsedExit < parsedEntry) {
       errors.push({
         path: "exitDate",
         message: "exitDate cannot be before entryDate",

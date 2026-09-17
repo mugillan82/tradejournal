@@ -174,7 +174,7 @@ export function AnalyticsPerformanceChart({
             <span>Cumulative Realized P&L</span>
             <span
               className={`text-xs font-mono font-bold ${
-                isOverallPositive ? "text-emerald-400" : "text-rose-400"
+                isOverallPositive ? "text-purple-400" : "text-rose-400"
               }`}
             >
               {formatTooltipCurrency(finalCumPnl)}
@@ -225,8 +225,8 @@ export function AnalyticsPerformanceChart({
         >
           <defs>
             <linearGradient id="areaGradientPos" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
             </linearGradient>
             <linearGradient id="areaGradientNeg" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.28" />
@@ -244,7 +244,7 @@ export function AnalyticsPerformanceChart({
                   y1={y}
                   x2={vbWidth - padRight}
                   y2={y}
-                  stroke={val === 0 ? "#475569" : "#1e293b"}
+                  stroke={val === 0 ? "#6b5b95" : "#1f1a2d"}
                   strokeWidth={val === 0 ? 1.5 : 1}
                   strokeDasharray={val === 0 ? undefined : "3 3"}
                 />
@@ -252,7 +252,7 @@ export function AnalyticsPerformanceChart({
                   x={padLeft - 8}
                   y={y + 4}
                   textAnchor="end"
-                  fill="#64748b"
+                  fill="#8e82a8"
                   className="text-[10px] font-mono select-none"
                 >
                   {formatTooltipCurrency(val)}
@@ -271,7 +271,7 @@ export function AnalyticsPerformanceChart({
           <path
             d={pathD}
             fill="none"
-            stroke={isOverallPositive ? "#10b981" : "#f43f5e"}
+            stroke={isOverallPositive ? "#c084fc" : "#f43f5e"}
             strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -286,7 +286,7 @@ export function AnalyticsPerformanceChart({
                 y1={padTop}
                 x2={getX(hoverIndex)}
                 y2={vbHeight - padBottom}
-                stroke="#94a3b8"
+                stroke="#c084fc"
                 strokeWidth={1}
                 strokeDasharray="2 2"
               />
@@ -296,8 +296,8 @@ export function AnalyticsPerformanceChart({
                 cx={getX(hoverIndex)}
                 cy={getY(hoveredPoint.cumPnl)}
                 r={5.5}
-                fill="#0f172a"
-                stroke={hoveredPoint.netPnl >= 0 ? "#10b981" : "#f43f5e"}
+                fill="#120d20"
+                stroke={hoveredPoint.netPnl >= 0 ? "#c084fc" : "#f43f5e"}
                 strokeWidth={2.5}
               />
             </g>

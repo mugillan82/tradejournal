@@ -21,7 +21,7 @@ function Alert({ variant = "error", children, className = "" }: AlertProps) {
       "bg-amber-950/50 border-amber-800/50 text-amber-200 [&>svg]:text-amber-400",
     info: "bg-blue-950/50 border-blue-800/50 text-blue-200 [&>svg]:text-blue-400",
     success:
-      "bg-emerald-950/50 border-emerald-800/50 text-emerald-200 [&>svg]:text-emerald-400",
+      "bg-purple-950/50 border-purple-800/50 text-purple-200 [&>svg]:text-purple-400",
   };
 
   return (

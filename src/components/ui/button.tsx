@@ -29,15 +29,15 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed select-none";
+      "inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed select-none";
 
     const variantStyles = {
       primary:
-        "bg-emerald-600 text-white hover:bg-emerald-500 active:bg-emerald-700 shadow-sm shadow-emerald-900/40",
+        "bg-purple-600 text-white hover:bg-purple-500 active:bg-purple-700 shadow-sm shadow-purple-900/50",
       secondary:
-        "bg-slate-800 text-slate-200 hover:bg-slate-700 active:bg-slate-900 border border-slate-700",
+        "bg-slate-800 text-slate-200 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 hover:border-purple-500/30",
       ghost:
-        "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 active:bg-slate-800",
+        "text-slate-400 hover:text-purple-300 hover:bg-purple-500/10 active:bg-purple-500/20",
     };
 
     const sizeStyles = {

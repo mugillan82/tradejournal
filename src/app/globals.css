@@ -1,63 +1,80 @@
 @import "tailwindcss";
 
-/* ── Brand design tokens ────────────────────────────────────── */
-/* All values use standard CSS numeric format — no unit-spacing bugs. */
+/* ── Stitch Obsidian Orbit Design System Tokens ───────────────────────── */
 :root {
-  /* Background */
-  --background: 222 47% 4%;       /* slate-950 — hsl(222, 47%, 4%)  */
-  --foreground: 215 25% 95%;     /* slate-100 — hsl(215, 25%, 95%) */
+  /* Obsidian Core Canvas (Midnight Violet Obsidian) */
+  --background: 260 30% 3%;            /* Ultra deep obsidian: #07050b */
+  --foreground: 260 20% 96%;           /* Crisp star lavender-white: #f5f3fa */
 
-  /* Primary (emerald) */
-  --primary:         160 84% 39%;    /* emerald-500 — hsl(160, 84%, 39%) */
-  --primary-hover:   160 84% 45%;    /* emerald-400 — hsl(160, 84%, 45%) */
-  --primary-active:  160 84% 32%;    /* emerald-600 — hsl(160, 84%, 32%) */
-  --primary-muted:  160 84% 39% / 0.12;
+  /* Obsidian Surface Tiers */
+  --surface: 260 25% 6%;               /* Obsidian base: #0c0914 */
+  --surface-raised: 260 22% 9%;        /* Obsidian card: #14101e */
+  --surface-hover: 260 20% 14%;        /* Obsidian hover: #1f1a2d */
+  --surface-active: 260 20% 18%;       /* Obsidian active: #2a233e */
+  --surface-glass: 260 25% 6% / 0.75;  /* Glassy obsidian layer */
 
-  /* Surface variants */
-  --surface:        217 33% 10%;   /* slate-900 — hsl(217, 33%, 10%)  */
-  --surface-hover:  217 33% 13%;   /* slate-800 — hsl(217, 33%, 13%)  */
-  --border:         215 20% 22%;   /* slate-700 — hsl(215, 20%, 22%)  */
-  --border-subtle:  215 20% 17%;   /* slate-800 — hsl(215, 20%, 17%)  */
+  /* Orbital Radiance Borders */
+  --border: 260 18% 18%;               /* Subtle divider: #282236 */
+  --border-subtle: 260 16% 12%;        /* Deep divider: #191523 */
+  --border-glow: 270 85% 65% / 0.35;   /* Orbital electric violet border glow */
+  --border-glow-cyan: 285 85% 70% / 0.35; /* Orbital lilac glow */
 
-  /* Text */
-  --muted:            215 16% 55%;  /* slate-400 — hsl(215, 16%, 55%) */
-  --muted-foreground: 215 16% 70%; /* slate-300 — hsl(215, 16%, 70%) */
+  /* Orbital Celestial Accents (Electric Purple / Violet HUD) */
+  --primary: 270 85% 65%;              /* Electric Violet (#a855f7) */
+  --primary-hover: 270 85% 72%;        /* Violet Flare (#c084fc) */
+  --primary-active: 270 80% 55%;       /* Deep Ultraviolet (#8b5cf6) */
+  --primary-muted: 270 85% 65% / 0.15; /* Violet Aura */
+  --primary-glow: 270 85% 65% / 0.35;  /* Violet Halo */
+
+  --orbit-cyan: 285 85% 70%;           /* Celestial Lilac (#e879f9) */
+  --orbit-cyan-muted: 285 85% 70% / 0.15;
+  --orbit-cyan-glow: 285 85% 70% / 0.35;
+
+  --orbit-violet: 270 85% 65%;         /* Nebula Violet */
+  --orbit-violet-muted: 270 85% 65% / 0.15;
+
+  --orbit-amber: 38 92% 50%;           /* Solar Amber */
+  --orbit-amber-muted: 38 92% 50% / 0.15;
+
+  /* Text & Telemetry */
+  --muted: 260 14% 54%;                /* Lavender Slate 400 */
+  --muted-foreground: 260 16% 70%;     /* Lavender Slate 300 */
 
   /* Semantic */
-  --destructive:      0 72% 51%;    /* red-600 */
-  --destructive-fg:  0 72% 97%;
-  --warning:         38 92% 50%;    /* amber-500 */
-  --success:         160 84% 39%;  /* emerald-500 */
+  --destructive: 350 89% 60%;          /* Supernova Rose/Red */
+  --destructive-fg: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --success: 270 85% 65%;
 }
 
-/* ── Tailwind @theme override ───────────────────────────────── */
+/* ── Tailwind @theme Inline Configuration ─────────────────────────────── */
 @theme inline {
-  /* Consume HSL variables with hsl(), matching how they are defined above. */
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-  --color-primary:         hsl(var(--primary));
-  --color-primary-hover:   hsl(var(--primary-hover));
-  --color-primary-active:  hsl(var(--primary-active));
-  --color-surface:         hsl(var(--surface));
-  --color-border:          hsl(var(--border));
-  --color-muted:           hsl(var(--muted));
+  --color-primary: hsl(var(--primary));
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-primary-active: hsl(var(--primary-active));
+  --color-surface: hsl(var(--surface));
+  --color-border: hsl(var(--border));
+  --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* ── Base ────────────────────────────────────────────────────── */
+/* ── Base ────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
 html {
   scroll-behavior: smooth;
+  color-scheme: dark;
 }
 
 body {
-  background: hsl(var(--background));
+  background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -65,30 +82,108 @@ body {
   min-height: 100dvh;
 }
 
-/* ── Focus visible ───────────────────────────────────────────── */
+/* ── Stitch Obsidian Orbit Utilities ─────────────────────────────────── */
+.orbit-glass {
+  background: rgba(12, 9, 20, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+}
+
+.orbit-glass-card {
+  background: linear-gradient(180deg, rgba(24, 18, 38, 0.65) 0%, rgba(12, 9, 20, 0.85) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(168, 85, 247, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+}
+
+.orbit-glow {
+  box-shadow: 0 0 25px -4px rgba(168, 85, 247, 0.35);
+}
+
+.orbit-glow-sm {
+  box-shadow: 0 0 12px -2px rgba(168, 85, 247, 0.4);
+}
+
+.orbit-glow-cyan {
+  box-shadow: 0 0 25px -4px rgba(232, 121, 249, 0.3);
+}
+
+.orbit-glow-violet {
+  box-shadow: 0 0 25px -4px rgba(168, 85, 247, 0.35);
+}
+
+.orbit-border-glow {
+  border-color: rgba(168, 85, 247, 0.45);
+  box-shadow: inset 0 0 12px 0 rgba(168, 85, 247, 0.12), 0 0 15px -3px rgba(168, 85, 247, 0.3);
+}
+
+.orbit-radial-canvas {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(168, 85, 247, 0.1), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 100%, rgba(232, 121, 249, 0.06), transparent 60%);
+}
+
+/* ── Orbit Keyframe Animations ───────────────────────────────────────── */
+@keyframes orbit-radar-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+.animate-orbit-radar {
+  animation: orbit-radar-pulse 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes orbit-beacon {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.8));
+  }
+  50% {
+    opacity: 0.6;
+    filter: drop-shadow(0 0 2px rgba(168, 85, 247, 0.3));
+  }
+}
+
+.animate-orbit-beacon {
+  animation: orbit-beacon 3s ease-in-out infinite;
+}
+
+/* ── Focus Visible ───────────────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid hsl(var(--primary));
   outline-offset: 2px;
 }
 
-/* ── Custom scrollbar ────────────────────────────────────────── */
+/* ── Custom Obsidian Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(var(--background));
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: rgba(168, 85, 247, 0.2);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted));
+  background: rgba(168, 85, 247, 0.35);
 }
 
-/* ── Text selection ──────────────────────────────────────────── */
+/* ── Text Selection ──────────────────────────────────────────────────── */
 ::selection {
-  background: hsl(var(--primary) / 0.25);
-  color: hsl(var(--foreground));
+  background: rgba(168, 85, 247, 0.35);
+  color: #ffffff;
 }

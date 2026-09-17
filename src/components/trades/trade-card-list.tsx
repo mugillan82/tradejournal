@@ -10,11 +10,14 @@
 import Link from "next/link";
 import type { TradeDto } from "@/lib/trading/trade/types";
 import type { TradingAccountDto } from "@/lib/trading/account/types";
-import { ChevronRight } from "@/components/icons";
+import { ChevronRight, Trash2 } from "@/components/icons";
 
 interface TradeCardListProps {
   trades: ReadonlyArray<TradeDto>;
   accounts: ReadonlyArray<TradingAccountDto>;
+  selectedTradeIds?: Set<string>;
+  onToggleSelectTrade?: (id: string) => void;
+  onDeleteTrade?: (trade: TradeDto) => void;
 }
 
 function formatDate(date: Date | null): string {
@@ -41,7 +44,13 @@ function formatCurrency(valStr: string | null): { formatted: string; isPos: bool
   return { formatted, isPos: num > 0, isNeg: num < 0 };
 }
 
-export function TradeCardList({ trades, accounts }: TradeCardListProps) {
+export function TradeCardList({
+  trades,
+  accounts,
+  selectedTradeIds,
+  onToggleSelectTrade,
+  onDeleteTrade,
+}: TradeCardListProps) {
   const accountMap = new Map(accounts.map((a) => [a.id, a.name]));
 
   return (
@@ -50,45 +59,61 @@ export function TradeCardList({ trades, accounts }: TradeCardListProps) {
         const accountName = accountMap.get(trade.tradingAccountId) || "Default Account";
         const net = formatCurrency(trade.netPnl);
         const isLong = trade.side === "LONG";
+        const isSelected = selectedTradeIds?.has(trade.id) ?? false;
 
         return (
-          <Link
+          <div
             key={trade.id}
-            href={`/trades/${trade.id}`}
-            className="block rounded-xl border border-slate-800 bg-slate-900/60 p-4 hover:border-slate-700 transition-all duration-150"
+            className={`rounded-xl border border-slate-800 bg-slate-900/60 p-4 transition-all duration-150 ${
+              isSelected ? "border-indigo-500/50 bg-indigo-950/20" : "hover:border-slate-700"
+            }`}
           >
             <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="space-y-0.5 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={[
-                      "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase",
-                      isLong
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                        : "bg-rose-500/10 text-rose-400 border border-rose-500/20",
-                    ].join(" ")}
+              <div className="flex items-start gap-2.5 min-w-0">
+                {onToggleSelectTrade && (
+                  <input
+                    type="checkbox"
+                    aria-label={`Select trade ${trade.title || trade.id}`}
+                    checked={isSelected}
+                    onChange={() => onToggleSelectTrade(trade.id)}
+                    className="mt-1 rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                )}
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={[
+                        "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase",
+                        isLong
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          : "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+                      ].join(" ")}
+                    >
+                      {trade.side}
+                    </span>
+                    <span
+                      className={[
+                        "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium tracking-wide uppercase",
+                        trade.status === "OPEN"
+                          ? "bg-cyan-500/10 text-cyan-400"
+                          : trade.status === "CLOSED"
+                          ? "bg-slate-800 text-slate-400"
+                          : "bg-amber-500/10 text-amber-400",
+                      ].join(" ")}
+                    >
+                      {trade.status}
+                    </span>
+                    <span className="text-[11px] text-slate-500 truncate">
+                      {accountName}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/trades/${trade.id}`}
+                    className="text-sm font-semibold text-slate-100 hover:text-indigo-400 block truncate transition-colors"
                   >
-                    {trade.side}
-                  </span>
-                  <span
-                    className={[
-                      "inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium tracking-wide uppercase",
-                      trade.status === "OPEN"
-                        ? "bg-cyan-500/10 text-cyan-400"
-                        : trade.status === "CLOSED"
-                        ? "bg-slate-800 text-slate-400"
-                        : "bg-amber-500/10 text-amber-400",
-                    ].join(" ")}
-                  >
-                    {trade.status}
-                  </span>
-                  <span className="text-[11px] text-slate-500 truncate">
-                    {accountName}
-                  </span>
+                    {trade.title || `Trade #${trade.id.slice(0, 8)}`}
+                  </Link>
                 </div>
-                <h3 className="text-sm font-semibold text-slate-100 truncate">
-                  {trade.title || `Trade #${trade.id.slice(0, 8)}`}
-                </h3>
               </div>
 
               <div className="text-right flex-shrink-0">
@@ -113,15 +138,32 @@ export function TradeCardList({ trades, accounts }: TradeCardListProps) {
                 <span className="text-[10px] text-slate-500 block uppercase font-sans">Entry</span>
                 <span>${trade.entryPrice}</span>
               </div>
-              <div className="text-right flex items-center justify-end gap-1">
+              <div className="text-right flex items-center justify-end gap-2">
                 <div>
                   <span className="text-[10px] text-slate-500 block uppercase font-sans">Exit</span>
                   <span>{trade.exitPrice ? `$${trade.exitPrice}` : "—"}</span>
                 </div>
-                <ChevronRight size={14} className="text-slate-600 ml-1" />
+                {onDeleteTrade && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteTrade(trade)}
+                    className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                    title="Delete trade"
+                    aria-label={`Delete trade ${trade.title || trade.id}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+                <Link
+                  href={`/trades/${trade.id}`}
+                  className="p-1 text-slate-500 hover:text-slate-200 transition-colors"
+                  aria-label={`View trade details for ${trade.title || trade.id}`}
+                >
+                  <ChevronRight size={14} />
+                </Link>
               </div>
             </div>
-          </Link>
+          </div>
         );
       })}
     </div>

@@ -117,8 +117,10 @@ export function normalizeRawCandidate(
   const quantity = normalizeOcrDecimal(raw.quantity);
   const entryPrice = normalizeOcrDecimal(raw.entryPrice);
   const exitPrice = normalizeOcrDecimal(raw.exitPrice);
-  const grossPnl = normalizeOcrDecimal(raw.grossPnl);
-  const netPnl = normalizeOcrDecimal(raw.netPnl);
+  const rawGrossPnl = normalizeOcrDecimal(raw.grossPnl);
+  const rawNetPnl = normalizeOcrDecimal(raw.netPnl);
+  const grossPnl = rawGrossPnl ?? rawNetPnl;
+  const netPnl = rawNetPnl ?? rawGrossPnl;
   const commission = normalizeOcrDecimal(raw.commission);
   const fees = normalizeOcrDecimal(raw.fees);
   const swap = normalizeOcrDecimal(raw.swap);

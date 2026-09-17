@@ -41,14 +41,14 @@ export function DashboardCalendarPreview({ calendar }: DashboardCalendarPreviewP
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4 text-cyan-400" />
+          <CalendarIcon className="w-4 h-4 text-purple-400" />
           <h2 className="text-sm font-semibold text-slate-100">
             Performance Calendar ({calendar.month})
           </h2>
         </div>
         <Link
           href={`/calendar?month=${calendar.month}`}
-          className="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
+          className="text-xs font-medium text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors"
         >
           <span>Open Full Calendar</span>
           <ExternalLink className="w-3 h-3" />

@@ -11,7 +11,7 @@
 import Link from "next/link";
 import type { TradeDto, TradeSortField, SortDirection } from "@/lib/trading/trade/types";
 import type { TradingAccountDto } from "@/lib/trading/account/types";
-import { ArrowUp, ArrowDown, ArrowUpDown, ChevronRight } from "@/components/icons";
+import { ArrowUp, ArrowDown, ArrowUpDown, ChevronRight, Trash2 } from "@/components/icons";
 
 interface TradeTableProps {
   trades: ReadonlyArray<TradeDto>;
@@ -19,6 +19,10 @@ interface TradeTableProps {
   sortField: TradeSortField;
   sortDirection: SortDirection;
   onSortChange: (field: TradeSortField) => void;
+  selectedTradeIds?: Set<string>;
+  onToggleSelectTrade?: (id: string) => void;
+  onToggleSelectAll?: () => void;
+  onDeleteTrade?: (trade: TradeDto) => void;
 }
 
 function formatDate(date: Date | null): string {
@@ -59,6 +63,10 @@ export function TradeTable({
   sortField,
   sortDirection,
   onSortChange,
+  selectedTradeIds,
+  onToggleSelectTrade,
+  onToggleSelectAll,
+  onDeleteTrade,
 }: TradeTableProps) {
   const accountMap = new Map(accounts.map((a) => [a.id, a.name]));
 
@@ -99,6 +107,18 @@ export function TradeTable({
       <table className="w-full text-left border-collapse text-sm">
         <thead>
           <tr className="border-b border-slate-800 bg-slate-900/80">
+            {onToggleSelectAll && (
+              <th scope="col" className="w-10 px-3 py-3 text-center">
+                <input
+                  type="checkbox"
+                  aria-label="Select all trades on this page"
+                  checked={trades.length > 0 && trades.every((t) => selectedTradeIds?.has(t.id))}
+                  onChange={onToggleSelectAll}
+                  className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
+                  data-testid="select-all-trades-checkbox"
+                />
+              </th>
+            )}
             {renderSortableHeader("Entry Date", "entryDate")}
             <th scope="col" className="px-4 py-3 text-xs font-semibold text-slate-400">
               Title / Note
@@ -126,7 +146,7 @@ export function TradeTable({
               Status
             </th>
             <th scope="col" className="px-4 py-3 text-xs font-semibold text-slate-400 text-center">
-              Detail
+              Actions
             </th>
           </tr>
         </thead>
@@ -137,12 +157,27 @@ export function TradeTable({
             const net = formatCurrency(trade.netPnl);
             const isLong = trade.side === "LONG";
             const rMultiple = trade.actualRMultiple ? `${formatDecimal(trade.actualRMultiple, 2)}R` : "—";
+            const isSelected = selectedTradeIds?.has(trade.id) ?? false;
 
             return (
               <tr
                 key={trade.id}
-                className="group hover:bg-slate-900/60 transition-colors duration-150"
+                className={`group hover:bg-slate-900/60 transition-colors duration-150 ${
+                  isSelected ? "bg-indigo-950/20" : ""
+                }`}
               >
+                {onToggleSelectTrade && (
+                  <td className="w-10 px-3 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select trade ${trade.title || trade.id}`}
+                      checked={isSelected}
+                      onChange={() => onToggleSelectTrade(trade.id)}
+                      className="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
+                      data-testid={`select-trade-checkbox-${trade.id}`}
+                    />
+                  </td>
+                )}
                 {/* Entry Date */}
                 <td className="px-4 py-3 text-slate-300 whitespace-nowrap font-sans text-xs">
                   {formatDate(trade.entryDate)}
@@ -240,16 +275,30 @@ export function TradeTable({
                   </span>
                 </td>
 
-                {/* Action Link */}
+                {/* Action Link & Delete */}
                 <td className="px-4 py-3 text-center whitespace-nowrap font-sans">
-                  <Link
-                    href={`/trades/${trade.id}`}
-                    className="inline-flex items-center justify-center p-1.5 rounded-md text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition-colors"
-                    title="View trade details"
-                    aria-label={`View trade details for ${trade.title || trade.id}`}
-                  >
-                    <ChevronRight size={16} />
-                  </Link>
+                  <div className="inline-flex items-center gap-1">
+                    <Link
+                      href={`/trades/${trade.id}`}
+                      className="inline-flex items-center justify-center p-1.5 rounded-md text-slate-400 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
+                      title="View trade details"
+                      aria-label={`View trade details for ${trade.title || trade.id}`}
+                    >
+                      <ChevronRight size={16} />
+                    </Link>
+                    {onDeleteTrade && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteTrade(trade)}
+                        className="inline-flex items-center justify-center p-1.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                        title="Delete trade"
+                        aria-label={`Delete trade ${trade.title || trade.id}`}
+                        data-testid={`delete-trade-btn-${trade.id}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );

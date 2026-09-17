@@ -10,12 +10,14 @@ import { CalendarClientPage } from "./calendar-client-page";
 import * as calendarClient from "@/lib/client/calendar";
 import * as analyticsClient from "@/lib/client/analytics";
 
+let mockSearchParams = new URLSearchParams("month=2026-09");
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),
     replace: vi.fn(),
   }),
-  useSearchParams: () => new URLSearchParams("month=2026-09"),
+  useSearchParams: () => mockSearchParams,
   usePathname: () => "/calendar",
 }));
 
@@ -173,5 +175,26 @@ describe("CalendarClientPage Component", () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("automatically opens day detail panel when ?date=YYYY-MM-DD query parameter is provided", async () => {
+    mockSearchParams = new URLSearchParams("month=2026-09&date=2026-09-02");
+    vi.spyOn(calendarClient, "fetchMonthCalendar").mockResolvedValue(mockCalendarData);
+    vi.spyOn(analyticsClient, "fetchFilterOptions").mockResolvedValue({
+      accounts: [],
+      strategies: [],
+      setups: [],
+      tags: [],
+      mistakes: [],
+    });
+
+    render(<CalendarClientPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-day-detail-panel")).toBeDefined();
+    });
+
+    expect(screen.getByTestId("day-detail-net-pnl").textContent).toContain("+$1,000.00");
+    mockSearchParams = new URLSearchParams("month=2026-09");
   });
 });

@@ -15,6 +15,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { signIn } from "@/lib/auth/client";
 import { getSafeRedirectPath } from "@/lib/auth/redirect";
 
@@ -152,6 +153,22 @@ export function SignInForm() {
           {formError}
         </Alert>
       )}
+
+      <div className="space-y-4">
+        <GoogleSignInButton
+          text="Continue with Google"
+          callbackUrl={safeRedirect ?? "/dashboard"}
+          disabled={submitting}
+          onError={(err) => setFormError(err)}
+        />
+
+        <div className="relative flex items-center justify-center">
+          <div className="w-full border-t border-slate-800" />
+          <span className="bg-slate-900 px-3 text-xs uppercase tracking-wider text-slate-500 font-medium absolute">
+            or continue with email
+          </span>
+        </div>
+      </div>
 
       <form
         onSubmit={handleSubmit}

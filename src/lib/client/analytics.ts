@@ -128,6 +128,7 @@ export async function fetchAnalyticsOverview(
       headers: {
         Accept: "application/json",
       },
+      cache: "no-store",
       signal,
     });
 

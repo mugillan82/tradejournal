@@ -40,7 +40,7 @@ export function DashboardTodayCard({ today, currentMonth }: DashboardTodayCardPr
       <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            <Clock className="w-3.5 h-3.5 text-indigo-400" />
+            <Clock className="w-3.5 h-3.5 text-purple-400" />
             <span>Today&apos;s Performance</span>
           </div>
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">

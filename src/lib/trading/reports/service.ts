@@ -52,6 +52,14 @@ function formatMonthUtc(d: Date): string {
   return `${year}-${month}`;
 }
 
+function getEffectiveNetPnl(trade: { netPnl: Prisma.Decimal | null; grossPnl?: Prisma.Decimal | null }): Prisma.Decimal {
+  return trade.netPnl ?? trade.grossPnl ?? ZERO_DECIMAL;
+}
+
+function getEffectiveGrossPnl(trade: { grossPnl: Prisma.Decimal | null; netPnl?: Prisma.Decimal | null }): Prisma.Decimal {
+  return trade.grossPnl ?? trade.netPnl ?? ZERO_DECIMAL;
+}
+
 export async function getReportOverview(
   rawFilters: unknown = {},
   providedUserId?: string,
@@ -209,8 +217,8 @@ export async function getReportOverview(
         countR: 0,
       };
       item.count++;
-      const netPnl = trade.netPnl ?? ZERO_DECIMAL;
-      const grossPnl = trade.grossPnl ?? netPnl;
+      const netPnl = getEffectiveNetPnl(trade);
+      const grossPnl = getEffectiveGrossPnl(trade);
       item.netPnl = item.netPnl.plus(netPnl);
 
       if (netPnl.greaterThan(0)) {
@@ -279,7 +287,7 @@ export async function getReportOverview(
         countR: 0,
       };
       item.count++;
-      const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+      const netPnl = getEffectiveNetPnl(trade);
       item.netPnl = item.netPnl.plus(netPnl);
       if (netPnl.greaterThan(0)) item.wins++;
       else if (netPnl.lessThan(0)) item.losses++;
@@ -336,7 +344,7 @@ export async function getReportOverview(
         countR: 0,
       };
       item.count++;
-      const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+      const netPnl = getEffectiveNetPnl(trade);
       item.netPnl = item.netPnl.plus(netPnl);
       if (netPnl.greaterThan(0)) item.wins++;
       else if (netPnl.lessThan(0)) item.losses++;
@@ -394,7 +402,7 @@ export async function getReportOverview(
           countR: 0,
         };
         item.count++;
-        const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+        const netPnl = getEffectiveNetPnl(trade);
         item.netPnl = item.netPnl.plus(netPnl);
         if (netPnl.greaterThan(0)) item.wins++;
         else if (netPnl.lessThan(0)) item.losses++;
@@ -449,7 +457,7 @@ export async function getReportOverview(
           totalLoss: ZERO_DECIMAL,
         };
         item.count++;
-        const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+        const netPnl = getEffectiveNetPnl(trade);
         item.netPnl = item.netPnl.plus(netPnl);
         if (netPnl.greaterThan(0)) {
           item.wins++;
@@ -501,7 +509,7 @@ export async function getReportOverview(
         netPnl: ZERO_DECIMAL,
       };
       item.count++;
-      const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+      const netPnl = getEffectiveNetPnl(trade);
       item.netPnl = item.netPnl.plus(netPnl);
       if (netPnl.greaterThan(0)) item.wins++;
       else if (netPnl.lessThan(0)) item.losses++;
@@ -543,8 +551,8 @@ export async function getReportOverview(
     let shortCountR = 0;
 
     for (const trade of closedTrades) {
-      const netPnl = trade.netPnl ?? ZERO_DECIMAL;
-      const grossPnl = trade.grossPnl ?? netPnl;
+      const netPnl = getEffectiveNetPnl(trade);
+      const grossPnl = getEffectiveGrossPnl(trade);
 
       if (trade.side === "LONG") {
         longCount++;
@@ -617,7 +625,7 @@ export async function getReportOverview(
       const d = trade.exitDate ?? trade.entryDate;
       const dateStr = formatDateUtc(d);
       const monthStr = formatMonthUtc(d);
-      const netPnl = trade.netPnl ?? ZERO_DECIMAL;
+      const netPnl = getEffectiveNetPnl(trade);
 
       // Daily
       const dItem = dailyMap.get(dateStr) ?? {

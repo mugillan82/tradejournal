@@ -70,7 +70,7 @@ export function CalendarFilterToolbar({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-slate-300">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono">
+            <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full font-mono">
               {activeFilterCount} active
             </span>
           )}
@@ -79,7 +79,7 @@ export function CalendarFilterToolbar({
         <div className="flex items-center gap-2">
           {isLoading && (
             <span className="text-[11px] text-slate-400 flex items-center gap-1.5 animate-pulse mr-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
               Updating...
             </span>
           )}
@@ -98,7 +98,7 @@ export function CalendarFilterToolbar({
           <button
             type="button"
             onClick={() => setShowMore((prev) => !prev)}
-            className="text-xs text-indigo-400 hover:text-indigo-300 font-medium px-2 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 transition-colors"
+            className="text-xs text-purple-300 hover:text-purple-200 font-medium px-2 py-1 rounded bg-purple-500/10 border border-purple-500/25 transition-colors"
           >
             {showMore ? "Fewer Filters" : "More Filters"}
           </button>
@@ -118,7 +118,7 @@ export function CalendarFilterToolbar({
                 tradingAccountId: e.target.value || undefined,
               })
             }
-            className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
             data-testid="filter-calendar-account"
           >
             <option value="">All Accounts</option>
@@ -203,7 +203,7 @@ export function CalendarFilterToolbar({
                 strategyId: e.target.value || undefined,
               })
             }
-            className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
             data-testid="filter-calendar-strategy"
           >
             <option value="">All Strategies</option>
@@ -226,7 +226,7 @@ export function CalendarFilterToolbar({
                 setupId: e.target.value || undefined,
               })
             }
-            className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
             data-testid="filter-calendar-setup"
           >
             <option value="">All Setups</option>
@@ -253,7 +253,7 @@ export function CalendarFilterToolbar({
                   tagId: e.target.value || undefined,
                 })
               }
-              className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
               data-testid="filter-calendar-tag"
             >
               <option value="">All Tags</option>
@@ -276,7 +276,7 @@ export function CalendarFilterToolbar({
                   mistakeId: e.target.value || undefined,
                 })
               }
-              className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full h-8 px-2 rounded-lg bg-slate-800 border border-slate-700/80 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-500"
               data-testid="filter-calendar-mistake"
             >
               <option value="">All Mistakes</option>

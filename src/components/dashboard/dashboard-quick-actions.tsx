@@ -10,12 +10,20 @@ import React from "react";
 import Link from "next/link";
 import { PlusCircle, ListOrdered, BarChart3, Calendar, FileText, BookOpen } from "@/components/icons";
 
-export function DashboardQuickActions() {
+interface DashboardQuickActionsProps {
+  selectedAccountId?: string;
+}
+
+export function DashboardQuickActions({ selectedAccountId }: DashboardQuickActionsProps = {}) {
+  const addTradeHref = selectedAccountId
+    ? `/trades/new?tradingAccountId=${encodeURIComponent(selectedAccountId)}`
+    : "/trades/new";
+
   const actions = [
     {
       title: "Add New Trade",
       description: "Log an entry, stop, target & tags",
-      href: "/trades/new",
+      href: addTradeHref,
       icon: PlusCircle,
       accentColor: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
     },
