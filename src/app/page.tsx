@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/auth/session";
-import { BrandMark } from "@/components/brand/brand-mark";
 
 /**
  * / (Home)
  *
- * Marketing-style landing surface for TradeJournal.
+ * Marketing-style landing surface for KAIVO.
  * If the visitor is already authenticated, route them straight to
  * the dashboard. Otherwise, give them an entry point to sign in or
  * create an account.
@@ -29,14 +28,11 @@ export default async function HomePage() {
       </div>
 
       <div className="max-w-md w-full space-y-8 text-center relative z-10">
-        <div className="flex justify-center">
-          <BrandMark size="lg" />
-        </div>
-        <div className="space-y-3">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-50">
-            KAIVO
+        <div className="space-y-4">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-50 drop-shadow-[0_0_35px_rgba(168,85,247,0.25)]">
+            KAI<span className="text-purple-400">VO</span>
           </h1>
-          <p className="text-sm sm:text-base text-slate-400 max-w-sm mx-auto">
+          <p className="text-sm sm:text-base text-slate-400 max-w-sm mx-auto leading-relaxed">
             A modern trading log and analytics platform. Log every trade,
             review your edge, and improve with data.
           </p>
