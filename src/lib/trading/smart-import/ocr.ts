@@ -128,8 +128,15 @@ export class TesseractOcrProvider implements OcrProvider {
               await this.initialize();
             }
 
-            if (isSettled || !this.worker) {
+            if (isSettled) {
               cleanup();
+              return;
+            }
+
+            if (!this.worker) {
+              cleanup();
+              clearTimeout(timer);
+              reject(new Error("Local OCR worker could not be initialized in this environment"));
               return;
             }
 

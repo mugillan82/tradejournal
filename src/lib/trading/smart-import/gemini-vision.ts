@@ -1,4 +1,5 @@
 import "server-only";
+import sharp from "sharp";
 import { GoogleGenAI, Type } from "@google/genai";
 import { PlatformSource } from "./types";
 
@@ -9,19 +10,24 @@ export interface GeminiExtractionResult {
 }
 
 export class GeminiVisionProvider {
+  private apiKey: string | null = null;
   private ai: GoogleGenAI | null = null;
-  private isAvailable: boolean = false;
 
-  constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey) {
-      this.ai = new GoogleGenAI({ apiKey });
-      this.isAvailable = true;
+  private getAi(): GoogleGenAI {
+    const key = process.env.GEMINI_API_KEY?.trim();
+    if (!key) {
+      throw new Error("GEMINI_API_KEY is not configured in environment variables");
     }
+    if (!this.ai || this.apiKey !== key) {
+      this.apiKey = key;
+      this.ai = new GoogleGenAI({ apiKey: key });
+    }
+    return this.ai;
   }
 
   isConfigured(): boolean {
-    return this.isAvailable && this.ai !== null;
+    const key = process.env.GEMINI_API_KEY?.trim();
+    return Boolean(key && key.length > 0);
   }
 
   async extractTrades(
@@ -29,8 +35,23 @@ export class GeminiVisionProvider {
     mimeType: string,
     ocrTextHint?: string
   ): Promise<GeminiExtractionResult> {
-    if (!this.ai) {
-      throw new Error("Gemini API key is not configured");
+    const ai = this.getAi();
+
+    // Optimize image size if dimensions exceed 1600px to speed up AI token ingestion and prevent timeouts
+    let bufferToSend = imageBuffer;
+    let mimeToSend = mimeType;
+    try {
+      const meta = await sharp(imageBuffer).metadata();
+      if ((meta.width && meta.width > 1600) || (meta.height && meta.height > 1600)) {
+        bufferToSend = await sharp(imageBuffer)
+          .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: 85 })
+          .toBuffer();
+        mimeToSend = "image/jpeg";
+      }
+    } catch {
+      bufferToSend = imageBuffer;
+      mimeToSend = mimeType;
     }
 
     // Tightly controlled instruction
@@ -97,37 +118,54 @@ CRITICAL INSTRUCTIONS & TRUST BOUNDARY:
 
     promptParts.push({
       inlineData: {
-        mimeType,
-        data: imageBuffer.toString("base64"),
+        mimeType: mimeToSend,
+        data: bufferToSend.toString("base64"),
       },
     });
 
-    try {
-      const response = await this.ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: promptParts,
-        config: {
-          systemInstruction,
-          responseMimeType: "application/json",
-          responseSchema: schema,
-        },
-      });
+    const candidateModels = [
+      "gemini-3.5-flash-lite",
+      "gemini-3.5-flash",
+      "gemini-3.6-flash",
+      "gemini-flash-latest",
+    ];
 
-      const responseText = response.text;
-      if (!responseText) {
-        throw new Error("Empty response from Gemini Vision");
+    let lastError: unknown = null;
+
+    for (const model of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: promptParts,
+          config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: schema,
+          },
+        });
+
+        const responseText = response.text;
+        if (!responseText) {
+          throw new Error(`Empty response from Gemini Vision (${model})`);
+        }
+
+        const result = JSON.parse(responseText);
+
+        return {
+          source: result.source || "Generic Broker",
+          sourceConfidence: typeof result.sourceConfidence === "number" ? result.sourceConfidence : 0.5,
+          trades: Array.isArray(result.trades) ? result.trades : [],
+        };
+      } catch (err: unknown) {
+        lastError = err;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[GEMINI_VISION] Model ${model} failed, attempting fallback:`, msg);
+        // If it's a rate limit or 503 high demand, try the next model immediately
+        continue;
       }
-
-      const result = JSON.parse(responseText);
-
-      return {
-        source: result.source || "Generic Broker",
-        sourceConfidence: typeof result.sourceConfidence === "number" ? result.sourceConfidence : 0.5,
-        trades: Array.isArray(result.trades) ? result.trades : [],
-      };
-    } catch (err: unknown) {
-      console.error("Gemini Vision Extraction Error:", err);
-      throw err;
     }
+
+    console.error("[GEMINI_VISION] All candidate models failed:", lastError);
+    throw lastError || new Error("All Gemini Vision models failed to process image");
   }
 }

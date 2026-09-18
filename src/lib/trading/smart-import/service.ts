@@ -11,9 +11,9 @@ const ocrProvider = new TesseractOcrProvider();
 const geminiProvider = new GeminiVisionProvider();
 
 export const PIPELINE_TIMEOUT_MS =
-  Number(process.env.PIPELINE_TIMEOUT_MS) || 45000;
+  Number(process.env.PIPELINE_TIMEOUT_MS) || 52000;
 export const AI_VISION_TIMEOUT_MS =
-  Number(process.env.AI_VISION_TIMEOUT_MS) || 20000;
+  Number(process.env.AI_VISION_TIMEOUT_MS) || 45000;
 
 interface RateLimitBucket {
   count: number;
@@ -93,6 +93,7 @@ export async function processScreenshot(
       let rawCandidates: Partial<Record<string, string>>[] = [];
       let nonTradeRows: NonTradeRow[] = [];
       let geminiResult: GeminiExtractionResult | null = null;
+      let lastGeminiError: string | null = null;
 
       // 1. Fast path: If Gemini Vision is available, prioritize it for fast, highly accurate extraction
       if (geminiProvider.isConfigured() && !signal?.aborted) {
@@ -112,45 +113,59 @@ export async function processScreenshot(
             };
           }
         } catch (err: unknown) {
-          console.warn("Gemini Vision attempt omitted or failed, falling back to local OCR:", err instanceof Error ? err.message : err);
+          lastGeminiError = err instanceof Error ? err.message : String(err);
+          console.warn("[SMART_IMPORT_GEMINI_ERROR]", lastGeminiError);
         }
+      } else if (process.env.VERCEL && !geminiProvider.isConfigured()) {
+        throw new Error("GEMINI_API_KEY is not configured in Vercel environment variables. Please add GEMINI_API_KEY in Vercel Project Settings > Environment Variables.");
       }
 
       // 2. Local OCR Extraction: Runs if Gemini was not configured or produced 0 trades
+      // In Vercel serverless functions, Tesseract worker_threads are disabled; report AI error directly instead of hanging.
       if (rawCandidates.length === 0 && !signal?.aborted) {
-        const ocrResult = await ocrProvider.readText(imageBuffer, mimeType, signal);
-        ocrText = ocrResult.text;
-
-        if (signal?.aborted) {
-          throw new Error("CLIENT_ABORTED");
-        }
-
-        sourceDetection = detectSource(ocrText);
-        const localResult = parseOcrTextDetailed(ocrText, sourceDetection.source);
-        rawCandidates = localResult.trades;
-        nonTradeRows = localResult.nonTradeRows;
-
-        // 3. Fallback to Gemini Vision with OCR hint if local parsing found 0 candidates
-        if (rawCandidates.length === 0 && geminiProvider.isConfigured() && !geminiResult && !signal?.aborted) {
+        if (process.env.VERCEL) {
+          if (lastGeminiError) {
+            throw new Error(`AI Extraction failed: ${lastGeminiError}`);
+          }
+        } else {
           try {
-            checkVisionRateLimit(userId);
-            geminiResult = await withTimeout(
-              geminiProvider.extractTrades(imageBuffer, mimeType, ocrText),
-              AI_VISION_TIMEOUT_MS,
-              `Gemini Vision timed out after ${AI_VISION_TIMEOUT_MS}ms`
-            );
-            if (geminiResult && Array.isArray(geminiResult.trades) && geminiResult.trades.length > 0) {
-              rawCandidates = geminiResult.trades;
-              if (geminiResult.sourceConfidence > sourceDetection.confidence) {
-                sourceDetection = {
-                  source: geminiResult.source,
-                  confidence: geminiResult.sourceConfidence,
-                  evidence: ["Gemini Vision"],
-                };
+            const ocrResult = await ocrProvider.readText(imageBuffer, mimeType, signal);
+            ocrText = ocrResult.text;
+
+            if (signal?.aborted) {
+              throw new Error("CLIENT_ABORTED");
+            }
+
+            sourceDetection = detectSource(ocrText);
+            const localResult = parseOcrTextDetailed(ocrText, sourceDetection.source);
+            rawCandidates = localResult.trades;
+            nonTradeRows = localResult.nonTradeRows;
+
+            // 3. Fallback to Gemini Vision with OCR hint if local parsing found 0 candidates
+            if (rawCandidates.length === 0 && geminiProvider.isConfigured() && !geminiResult && !signal?.aborted) {
+              try {
+                checkVisionRateLimit(userId);
+                geminiResult = await withTimeout(
+                  geminiProvider.extractTrades(imageBuffer, mimeType, ocrText),
+                  AI_VISION_TIMEOUT_MS,
+                  `Gemini Vision timed out after ${AI_VISION_TIMEOUT_MS}ms`
+                );
+                if (geminiResult && Array.isArray(geminiResult.trades) && geminiResult.trades.length > 0) {
+                  rawCandidates = geminiResult.trades;
+                  if (geminiResult.sourceConfidence > sourceDetection.confidence) {
+                    sourceDetection = {
+                      source: geminiResult.source,
+                      confidence: geminiResult.sourceConfidence,
+                      evidence: ["Gemini Vision"],
+                    };
+                  }
+                }
+              } catch (err: unknown) {
+                console.warn("Optional Gemini Vision fallback omitted/failed:", err instanceof Error ? err.message : err);
               }
             }
-          } catch (err: unknown) {
-            console.warn("Optional Gemini Vision fallback omitted/failed:", err instanceof Error ? err.message : err);
+          } catch (ocrErr: unknown) {
+            console.warn("Local OCR provider failed:", ocrErr instanceof Error ? ocrErr.message : ocrErr);
           }
         }
       }

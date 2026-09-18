@@ -97,7 +97,7 @@ export function SmartImportClientPage() {
     const timeoutId = setTimeout(() => {
       didTimeout = true;
       controller.abort();
-    }, 55000); // 55-second client-side timeout to match server maxDuration budget
+    }, 58000); // 58-second client-side timeout to match server maxDuration budget
 
     try {
       const res = await fetch("/api/imports/smart/preview", {
