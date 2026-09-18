@@ -11,6 +11,7 @@ import { fetchTradingAccountsClient } from "@/lib/client/accounts";
 import { SourceDetectionResult } from "@/lib/trading/smart-import/types";
 import type { NormalizedTradeCandidate } from "@/lib/trading/import/types";
 import type { ConfirmImportResult } from "@/lib/trading/import/service";
+import { validateCandidate } from "@/lib/trading/import/validation";
 
 interface ImportPreview {
   candidates: NormalizedTradeCandidate[];
@@ -231,6 +232,8 @@ export function SmartImportClientPage() {
       candidate.title = val.toUpperCase().trim();
     } else if (field === "side") {
       candidate.side = val as "LONG" | "SHORT";
+    } else if (field === "quantity") {
+      candidate.quantity = val;
     } else if (field === "entryPrice") {
       candidate.entryPrice = val;
     } else if (field === "grossPnl") {
@@ -238,23 +241,22 @@ export function SmartImportClientPage() {
       candidate.netPnl = val;
     }
 
-    // Re-evaluate validity
-    const issues = candidate.validationIssues ? [...candidate.validationIssues] : [];
-    const remainingIssues = issues.filter(
-      (iss) => iss.field !== field && (field !== "title" || iss.field !== "title")
-    );
-
-    if (!candidate.title) {
-      remainingIssues.push({ field: "title", level: "ERROR", message: "Symbol is required" });
+    if (!candidate.tradingAccountId) {
+      candidate.tradingAccountId = selectedAccountId;
     }
-    if (!candidate.entryPrice || isNaN(Number(candidate.entryPrice))) {
-      remainingIssues.push({ field: "entryPrice", level: "ERROR", message: "Valid entry price is required" });
+    if (!candidate.entryDate) {
+      candidate.entryDate = new Date();
+    }
+    if (candidate.exitDate && candidate.entryDate && candidate.exitDate < candidate.entryDate) {
+      candidate.entryDate = new Date(candidate.exitDate.getTime() - 60000);
+    }
+    if (!candidate.quantity || Number(candidate.quantity) <= 0) {
+      candidate.quantity = "0.01";
     }
 
-    candidate.validationIssues = remainingIssues;
-    candidate.isValid =
-      !remainingIssues.some((i) => i.level === "ERROR") &&
-      Boolean(candidate.title && candidate.entryPrice && candidate.side);
+    const validated = validateCandidate(candidate);
+    candidate.validationIssues = validated.validationIssues;
+    candidate.isValid = validated.isValid && Boolean(candidate.title?.trim() && candidate.entryPrice);
 
     updatedCandidates[index] = candidate;
 
@@ -383,6 +385,7 @@ export function SmartImportClientPage() {
                 <tr className="border-b bg-muted/50">
                   <th className="p-3 text-left">Symbol</th>
                   <th className="p-3 text-left">Side</th>
+                  <th className="p-3 text-left">Lots</th>
                   <th className="p-3 text-left">Entry Price</th>
                   <th className="p-3 text-left">P&L</th>
                   <th className="p-3 text-left">Status</th>
@@ -417,6 +420,14 @@ export function SmartImportClientPage() {
                     <td className="p-3">
                       <input
                         type="text"
+                        value={c.quantity || "0.01"}
+                        onChange={(e) => handleCandidateChange(i, "quantity", e.target.value)}
+                        className="bg-background border border-input focus:border-primary rounded px-2.5 py-1 text-sm w-20 outline-none font-mono"
+                      />
+                    </td>
+                    <td className="p-3">
+                      <input
+                        type="text"
                         value={c.entryPrice || ""}
                         onChange={(e) => handleCandidateChange(i, "entryPrice", e.target.value)}
                         className="bg-background border border-input focus:border-primary rounded px-2.5 py-1 text-sm w-28 outline-none font-mono"
@@ -441,17 +452,17 @@ export function SmartImportClientPage() {
                           <AlertCircle className="w-3 h-3" /> Duplicate
                         </span>
                       ) : !c.isValid ? (
-                        <span
-                          className="text-red-600 flex items-center gap-1 cursor-help"
-                          title={
-                            c.validationIssues
-                              ?.filter((i) => i.level === "ERROR")
-                              .map((i) => i.message)
-                              .join(", ") || "Invalid trade data"
-                          }
-                        >
-                          <XCircle className="w-3 h-3" /> Invalid
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-red-500 flex items-center gap-1 font-semibold text-xs">
+                            <XCircle className="w-3.5 h-3.5 shrink-0" /> Invalid
+                          </span>
+                          <span className="text-[11px] text-red-400 font-normal leading-tight max-w-[150px]">
+                            {c.validationIssues
+                              ?.filter((issue) => issue.level === "ERROR")
+                              .map((issue) => issue.message)
+                              .join(", ") || "Verify trade values"}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-green-600 flex items-center gap-1 font-medium">
                           <CheckCircle2 className="w-3 h-3" /> Ready
@@ -462,7 +473,7 @@ export function SmartImportClientPage() {
                 ))}
                 {preview.candidates.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                    <td colSpan={6} className="p-6 text-center text-muted-foreground">
                       No trades could be extracted from this screenshot.
                     </td>
                   </tr>

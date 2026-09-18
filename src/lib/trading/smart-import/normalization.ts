@@ -120,11 +120,25 @@ export function normalizeRawCandidate(
   const rawExitDate = raw.exitDate || raw.closedAt || raw.closeDate || raw.closeTime;
 
   const parsedEntryDate = normalizeOcrDate(rawEntryDate);
-  // Default to today if date is omitted on mobile screenshot, keeping candidate valid
-  const entryDate = parsedEntryDate || new Date();
   const exitDate = normalizeOcrDate(rawExitDate);
 
-  const quantity = normalizeOcrDecimal(raw.quantity || raw.volume || raw.lots || raw.size) || "0.01";
+  // If entryDate is omitted in the screenshot, default to exitDate (or 1 min before exitDate), or today
+  let entryDate = parsedEntryDate;
+  if (!entryDate) {
+    if (exitDate) {
+      entryDate = new Date(exitDate.getTime() - 60000);
+    } else {
+      entryDate = new Date();
+    }
+  } else if (exitDate && exitDate < entryDate) {
+    // If exit date is before entry date due to partial OCR or timestamp rollover, align entryDate
+    entryDate = new Date(exitDate.getTime() - 60000);
+  }
+
+  let quantity = normalizeOcrDecimal(raw.quantity || raw.volume || raw.lots || raw.size);
+  if (!quantity || isNaN(Number(quantity)) || Number(quantity) <= 0) {
+    quantity = "0.01";
+  }
   const entryPrice = normalizeOcrDecimal(raw.entryPrice || raw.openPrice || raw.price);
   const exitPrice = normalizeOcrDecimal(raw.exitPrice || raw.closePrice);
   const rawGrossPnl = normalizeOcrDecimal(raw.grossPnl || raw.profit || raw.pnl);
