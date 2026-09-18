@@ -42,10 +42,13 @@ export function GoogleSignInButton({
         if (message === "Provider not found") {
           message =
             "Google Sign-In is not configured on this deployment. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables.";
+        } else if (!message || (result.error as { status?: number }).status === 500) {
+          message =
+            "Authentication server error. Please verify your database connection (DATABASE_URL) in Vercel environment variables.";
         }
         onError?.(
           message ||
-            "Could not connect to Google. Please verify your Google OAuth credentials in .env.",
+            "Could not connect to Google. Please try again.",
         );
         setLoading(false);
         return;
