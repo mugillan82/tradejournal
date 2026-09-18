@@ -93,11 +93,12 @@ export function normalizeRawCandidate(
 
   // Side normalization
   let side: TradeSideValue | undefined = undefined;
-  if (raw.side) {
-    const s = raw.side.toUpperCase();
-    if (s === "SHORT" || s === "SELL") {
+  const rawSide = raw.side || raw.type || raw.action;
+  if (rawSide) {
+    const s = rawSide.toUpperCase();
+    if (s.includes("SHORT") || s.includes("SELL")) {
       side = "SHORT";
-    } else if (s === "LONG" || s === "BUY") {
+    } else if (s.includes("LONG") || s.includes("BUY")) {
       side = "LONG";
     }
   }
@@ -107,33 +108,43 @@ export function normalizeRawCandidate(
   if (raw.status) {
     const s = raw.status.toUpperCase();
     if (s === "OPEN" || s === "ACTIVE") status = "OPEN";
-  } else if (!raw.exitDate && !raw.exitPrice && !raw.grossPnl && !raw.netPnl) {
+  } else if (!raw.exitDate && !raw.closedAt && !raw.exitPrice && !raw.grossPnl && !raw.netPnl) {
     status = "OPEN";
   }
 
-  const entryDate = normalizeOcrDate(raw.entryDate);
-  const exitDate = normalizeOcrDate(raw.exitDate);
+  // Map title / symbol from all possible extracted keys (e.g. Gemini returns 'symbol', OCR returns 'title')
+  const rawTitle = raw.title || raw.symbol || raw.instrument || raw.asset || raw.pair || raw.ticker;
+  const title = rawTitle ? rawTitle.toUpperCase().replace(/[^A-Z0-9.\-_/]/g, "").trim() : undefined;
 
-  const quantity = normalizeOcrDecimal(raw.quantity);
-  const entryPrice = normalizeOcrDecimal(raw.entryPrice);
-  const exitPrice = normalizeOcrDecimal(raw.exitPrice);
-  const rawGrossPnl = normalizeOcrDecimal(raw.grossPnl);
+  const rawEntryDate = raw.entryDate || raw.openedAt || raw.openDate || raw.openTime || raw.dateTime || raw.time;
+  const rawExitDate = raw.exitDate || raw.closedAt || raw.closeDate || raw.closeTime;
+
+  const parsedEntryDate = normalizeOcrDate(rawEntryDate);
+  // Default to today if date is omitted on mobile screenshot, keeping candidate valid
+  const entryDate = parsedEntryDate || new Date();
+  const exitDate = normalizeOcrDate(rawExitDate);
+
+  const quantity = normalizeOcrDecimal(raw.quantity || raw.volume || raw.lots || raw.size) || "0.01";
+  const entryPrice = normalizeOcrDecimal(raw.entryPrice || raw.openPrice || raw.price);
+  const exitPrice = normalizeOcrDecimal(raw.exitPrice || raw.closePrice);
+  const rawGrossPnl = normalizeOcrDecimal(raw.grossPnl || raw.profit || raw.pnl);
   const rawNetPnl = normalizeOcrDecimal(raw.netPnl);
   const grossPnl = rawGrossPnl ?? rawNetPnl;
   const netPnl = rawNetPnl ?? rawGrossPnl;
   const commission = normalizeOcrDecimal(raw.commission);
   const fees = normalizeOcrDecimal(raw.fees);
   const swap = normalizeOcrDecimal(raw.swap);
-  const stopLoss = normalizeOcrDecimal(raw.stopLoss);
-  const takeProfit = normalizeOcrDecimal(raw.takeProfit);
+  const stopLoss = normalizeOcrDecimal(raw.stopLoss || raw.sl);
+  const takeProfit = normalizeOcrDecimal(raw.takeProfit || raw.tp);
+  const externalReference = raw.externalReference || raw.externalIdentifier || raw.ticket || raw.orderId || raw.positionId;
 
   return {
     candidateId,
     tradingAccountId: "", // To be filled by the service/preview
-    externalReference: raw.externalReference,
-    side,
+    externalReference,
+    side: side || "LONG",
     status,
-    title: raw.title ? raw.title.toUpperCase().replace(/[^A-Z0-9.\-_]/g, "") : undefined,
+    title,
     quantity,
     entryPrice,
     exitPrice,

@@ -217,6 +217,68 @@ export function SmartImportClientPage() {
     }
   };
 
+  const handleCandidateChange = (
+    index: number,
+    field: keyof NormalizedTradeCandidate,
+    val: string
+  ) => {
+    if (!preview) return;
+
+    const updatedCandidates = [...preview.candidates];
+    const candidate = { ...updatedCandidates[index] };
+
+    if (field === "title") {
+      candidate.title = val.toUpperCase().trim();
+    } else if (field === "side") {
+      candidate.side = val as "LONG" | "SHORT";
+    } else if (field === "entryPrice") {
+      candidate.entryPrice = val;
+    } else if (field === "grossPnl") {
+      candidate.grossPnl = val;
+      candidate.netPnl = val;
+    }
+
+    // Re-evaluate validity
+    const issues = candidate.validationIssues ? [...candidate.validationIssues] : [];
+    const remainingIssues = issues.filter(
+      (iss) => iss.field !== field && (field !== "title" || iss.field !== "title")
+    );
+
+    if (!candidate.title) {
+      remainingIssues.push({ field: "title", level: "ERROR", message: "Symbol is required" });
+    }
+    if (!candidate.entryPrice || isNaN(Number(candidate.entryPrice))) {
+      remainingIssues.push({ field: "entryPrice", level: "ERROR", message: "Valid entry price is required" });
+    }
+
+    candidate.validationIssues = remainingIssues;
+    candidate.isValid =
+      !remainingIssues.some((i) => i.level === "ERROR") &&
+      Boolean(candidate.title && candidate.entryPrice && candidate.side);
+
+    updatedCandidates[index] = candidate;
+
+    let validCount = 0;
+    let invalidCount = 0;
+    let exactDupCount = 0;
+    let possibleDupCount = 0;
+
+    for (const c of updatedCandidates) {
+      if (c.isValid) validCount++;
+      else invalidCount++;
+      if (c.duplicateMatch?.classification === "EXACT") exactDupCount++;
+      if (c.duplicateMatch?.classification === "POSSIBLE") possibleDupCount++;
+    }
+
+    setPreview({
+      ...preview,
+      candidates: updatedCandidates,
+      readyCount: Math.max(0, validCount - exactDupCount),
+      errorCount: invalidCount,
+      duplicateCount: exactDupCount + possibleDupCount,
+    });
+  };
+
   return (
     <div className="space-y-6">
       {!preview && !importResult && (
@@ -251,32 +313,33 @@ export function SmartImportClientPage() {
                   </div>
                   <div className="text-sm">{error}</div>
                 </Alert>
-                {(status === "FAILED" || status === "TIMEOUT") && (
-                  <div className="flex gap-2">
-                    <Button variant="secondary" onClick={handleUpload} disabled={!file || isLoading}>
-                      Retry Extraction
-                    </Button>
-                  </div>
-                )}
+                <Button variant="secondary" onClick={handleUpload} className="w-full sm:w-auto">
+                  Retry Extraction
+                </Button>
               </div>
             )}
 
-            <Button onClick={handleUpload} disabled={!file || isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? "Processing..." : "Extract Trades"}
+            <Button onClick={handleUpload} disabled={isLoading || !file} className="w-full sm:w-auto">
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Extracting Trades...
+                </>
+              ) : (
+                "Extract Trades"
+              )}
             </Button>
           </div>
         </div>
       )}
 
       {sourceDetection && (
-        <Alert>
+        <Alert variant={sourceDetection.confidence > 0.7 ? "info" : "warning"}>
           <CheckCircle2 className="h-4 w-4" />
           <div className="font-semibold mb-1">Detection Result</div>
           <div className="text-sm">
-            Detected Source: {sourceDetection.source} ({(sourceDetection.confidence * 100).toFixed(0)}% confidence).
-            <br />
-            Evidence: {sourceDetection.evidence.join(", ")}
+            Detected Source: {sourceDetection.source} ({Math.round(sourceDetection.confidence * 100)}% confidence).
+            {sourceDetection.evidence.length > 0 && ` Evidence: ${sourceDetection.evidence.join(", ")}`}
           </div>
         </Alert>
       )}
@@ -327,19 +390,48 @@ export function SmartImportClientPage() {
               </thead>
               <tbody>
                 {preview.candidates.map((c, i) => (
-                  <tr key={i} className="border-b">
-                    <td className="p-3 font-medium">{c.title || "Unknown"}</td>
+                  <tr key={i} className="border-b hover:bg-muted/30 transition-colors">
                     <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded text-xs ${
-                          c.side === "LONG" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                      <input
+                        type="text"
+                        value={c.title || ""}
+                        placeholder="e.g. NAS100"
+                        onChange={(e) => handleCandidateChange(i, "title", e.target.value)}
+                        className={`bg-background border rounded px-2.5 py-1 text-sm font-semibold w-32 uppercase outline-none transition-colors ${
+                          !c.title ? "border-red-500 bg-red-500/10 text-red-200" : "border-input focus:border-primary"
+                        }`}
+                      />
+                    </td>
+                    <td className="p-3">
+                      <select
+                        value={c.side || "LONG"}
+                        onChange={(e) => handleCandidateChange(i, "side", e.target.value)}
+                        className={`px-2 py-1 rounded text-xs font-semibold cursor-pointer border outline-none ${
+                          c.side === "LONG" ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-red-500/20 text-red-400 border-red-500/30"
                         }`}
                       >
-                        {c.side}
-                      </span>
+                        <option value="LONG" className="bg-card text-foreground">LONG</option>
+                        <option value="SHORT" className="bg-card text-foreground">SHORT</option>
+                      </select>
                     </td>
-                    <td className="p-3">{c.entryPrice}</td>
-                    <td className="p-3">{c.grossPnl || "-"}</td>
+                    <td className="p-3">
+                      <input
+                        type="text"
+                        value={c.entryPrice || ""}
+                        onChange={(e) => handleCandidateChange(i, "entryPrice", e.target.value)}
+                        className="bg-background border border-input focus:border-primary rounded px-2.5 py-1 text-sm w-28 outline-none font-mono"
+                      />
+                    </td>
+                    <td className="p-3">
+                      <input
+                        type="text"
+                        value={c.grossPnl || ""}
+                        onChange={(e) => handleCandidateChange(i, "grossPnl", e.target.value)}
+                        className={`bg-background border border-input focus:border-primary rounded px-2.5 py-1 text-sm w-28 outline-none font-mono ${
+                          Number(c.grossPnl) >= 0 ? "text-green-400" : "text-red-400"
+                        }`}
+                      />
+                    </td>
                     <td className="p-3">
                       {c.duplicateMatch?.classification && c.duplicateMatch.classification !== "NONE" ? (
                         <span
@@ -361,7 +453,7 @@ export function SmartImportClientPage() {
                           <XCircle className="w-3 h-3" /> Invalid
                         </span>
                       ) : (
-                        <span className="text-green-600 flex items-center gap-1">
+                        <span className="text-green-600 flex items-center gap-1 font-medium">
                           <CheckCircle2 className="w-3 h-3" /> Ready
                         </span>
                       )}
