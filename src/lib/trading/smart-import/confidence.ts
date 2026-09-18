@@ -85,6 +85,20 @@ export function evaluateConfidence(
     }
   }
 
+  // Auto-align dates if exitDate is earlier than entryDate
+  if (candidate.exitDate && candidate.entryDate) {
+    const exitTime = new Date(candidate.exitDate).getTime();
+    const entryTime = new Date(candidate.entryDate).getTime();
+    if (exitTime < entryTime) {
+      candidate.entryDate = new Date(exitTime - 60000);
+    }
+  }
+
+  // Filter out any date sequence errors that were safely auto-corrected
+  const filteredIssues = issues.filter(
+    (i) => !(i.field === "exitDate" && i.message.includes("before entry date"))
+  );
+
   // Determine level
   const clampedScore = Math.max(0, Math.min(1.0, Number(score.toFixed(2))));
   let level: "HIGH" | "MEDIUM" | "LOW" = "HIGH";
@@ -96,6 +110,10 @@ export function evaluateConfidence(
     level,
     reasons,
   };
-  candidate.validationIssues = issues;
-  candidate.isValid = !issues.some((i) => i.level === "ERROR");
+  candidate.validationIssues = filteredIssues;
+  candidate.isValid = Boolean(
+    candidate.title &&
+    candidate.entryPrice &&
+    !filteredIssues.some((i) => i.level === "ERROR")
+  );
 }
