@@ -97,7 +97,7 @@ export function SmartImportClientPage() {
     const timeoutId = setTimeout(() => {
       didTimeout = true;
       controller.abort();
-    }, 15000); // 15-second client-side timeout
+    }, 55000); // 55-second client-side timeout to match server maxDuration budget
 
     try {
       const res = await fetch("/api/imports/smart/preview", {
@@ -163,7 +163,7 @@ export function SmartImportClientPage() {
         setStatus("TIMEOUT");
         setError(
           didTimeout || (err instanceof Error && (err.name === "AbortError" || err.message.includes("aborted")))
-            ? "Screenshot processing timed out after 15 seconds. Please click 'Retry Extraction' or try a clearer image."
+            ? "Screenshot processing timed out. Please click 'Retry Extraction' or try a clearer image."
             : err instanceof Error
             ? err.message
             : "Screenshot processing timed out. Please retry."
