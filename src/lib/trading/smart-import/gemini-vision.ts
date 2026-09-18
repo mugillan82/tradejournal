@@ -103,19 +103,17 @@ CRITICAL INSTRUCTIONS & TRUST BOUNDARY:
     });
 
     try {
-      const interaction = await this.ai.interactions.create({
-        model: "gemini-3.8-flash",
-        store: false,
-        system_instruction: systemInstruction,
-        input: promptParts,
-        response_format: {
-          type: "text",
-          mime_type: "application/json",
-          schema: schema,
+      const response = await this.ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: promptParts,
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: schema,
         },
       });
 
-      const responseText = interaction.output_text;
+      const responseText = response.text;
       if (!responseText) {
         throw new Error("Empty response from Gemini Vision");
       }
