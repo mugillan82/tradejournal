@@ -23,6 +23,21 @@ function getAuthConfig() {
 
 const { secret } = getAuthConfig();
 
+function getBaseURL(): string {
+  let url =
+    process.env.BETTER_AUTH_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000");
+
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    url = `https://${url}`;
+  }
+  return url;
+}
+
 /**
  * Better Auth instance.
  *
@@ -32,11 +47,17 @@ const { secret } = getAuthConfig();
  */
 export const auth = betterAuth({
   secret,
-  baseURL:
-    process.env.BETTER_AUTH_URL ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000"),
+  baseURL: getBaseURL(),
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://kaivo-01.vercel.app",
+    "https://*.vercel.app",
+    ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
+    ...(process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? [`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`]
+      : []),
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+  ],
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),

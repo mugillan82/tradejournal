@@ -38,8 +38,13 @@ export function GoogleSignInButton({
       });
 
       if (result?.error) {
+        let message = result.error.message;
+        if (message === "Provider not found") {
+          message =
+            "Google Sign-In is not configured on this deployment. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables.";
+        }
         onError?.(
-          result.error.message ||
+          message ||
             "Could not connect to Google. Please verify your Google OAuth credentials in .env.",
         );
         setLoading(false);

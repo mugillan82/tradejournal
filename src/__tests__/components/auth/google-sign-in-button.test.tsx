@@ -65,6 +65,24 @@ describe("GoogleSignInButton Component", () => {
     });
   });
 
+  it("calls onError with a helpful message when provider is not configured", async () => {
+    (signIn.social as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      error: { message: "Provider not found" },
+    });
+
+    const onErrorMock = vi.fn();
+    render(<GoogleSignInButton onError={onErrorMock} />);
+
+    const button = screen.getByTestId("google-signin-button");
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(onErrorMock).toHaveBeenCalledWith(
+        "Google Sign-In is not configured on this deployment. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables.",
+      );
+    });
+  });
+
   it("disables button when disabled prop is true", () => {
     render(<GoogleSignInButton disabled={true} />);
 
