@@ -4,7 +4,9 @@ import fs from "fs";
 import path from "path";
 import { OcrProvider, OcrResult } from "./types";
 
-export const OCR_TIMEOUT_MS = 8000;
+export const OCR_TIMEOUT_MS =
+  Number(process.env.OCR_TIMEOUT_MS) ||
+  (process.env.NODE_ENV === "test" ? 8000 : 25000);
 
 /**
  * Resolves explicit physical filesystem paths for Tesseract.js worker script and traineddata.
@@ -13,6 +15,7 @@ export const OCR_TIMEOUT_MS = 8000;
  */
 function getTesseractOptions() {
   const cwd = process.cwd();
+  const cacheDir = process.env.VERCEL ? "/tmp" : cwd;
   let workerPath: string | undefined;
 
   // 1. Check direct physical filesystem path in node_modules first
@@ -37,7 +40,7 @@ function getTesseractOptions() {
   return {
     ...(workerPath ? { workerPath } : {}),
     ...(langPath ? { langPath } : {}),
-    cachePath: cwd,
+    cachePath: cacheDir,
     gzip: false,
   };
 }

@@ -7,6 +7,9 @@ import { listTrades } from "@/lib/trading/trade/service";
 import { detectDuplicate } from "@/lib/trading/import/duplicate";
 import type { TradeDto } from "@/lib/trading/trade/types";
 
+// Allow up to 60 seconds execution for AI / OCR screenshot analysis on Vercel
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireServerUserId();

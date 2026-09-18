@@ -3,15 +3,17 @@ import { detectSource } from "./source-detection";
 import { parseOcrTextDetailed } from "./parsing";
 import { normalizeRawCandidate } from "./normalization";
 import { evaluateConfidence } from "./confidence";
-import { SmartImportResult, NonTradeRow } from "./types";
+import { SmartImportResult, NonTradeRow, PlatformSource } from "./types";
 import { NormalizedTradeCandidate } from "../import/types";
 import { GeminiVisionProvider, GeminiExtractionResult } from "./gemini-vision";
 
 const ocrProvider = new TesseractOcrProvider();
 const geminiProvider = new GeminiVisionProvider();
 
-export const PIPELINE_TIMEOUT_MS = 10000; // 10 seconds total pipeline budget
-export const AI_VISION_TIMEOUT_MS = 3000; // 3 seconds max for optional AI fallback
+export const PIPELINE_TIMEOUT_MS =
+  Number(process.env.PIPELINE_TIMEOUT_MS) || 45000;
+export const AI_VISION_TIMEOUT_MS =
+  Number(process.env.AI_VISION_TIMEOUT_MS) || 20000;
 
 interface RateLimitBucket {
   count: number;
@@ -82,45 +84,74 @@ export async function processScreenshot(
         throw new Error("CLIENT_ABORTED");
       }
 
-      // 1. OCR Extraction (bounded by OCR_TIMEOUT_MS)
-      const ocrResult = await ocrProvider.readText(imageBuffer, mimeType, signal);
-
-      if (signal?.aborted) {
-        throw new Error("CLIENT_ABORTED");
-      }
-
-      // 2. Platform Source Detection
-      let sourceDetection = detectSource(ocrResult.text);
-
-      // 3. Deterministic Local Parsing (Extracts MT5 mobile/desktop trades and non-trade cashflows)
-      const localResult = parseOcrTextDetailed(ocrResult.text, sourceDetection.source);
-      let rawCandidates: Partial<Record<string, string>>[] = localResult.trades;
-      const nonTradeRows: NonTradeRow[] = localResult.nonTradeRows;
-
+      let ocrText = "";
+      let sourceDetection: { source: PlatformSource | "Generic Broker"; confidence: number; evidence: string[] } = {
+        source: "Generic Broker",
+        confidence: 0,
+        evidence: [],
+      };
+      let rawCandidates: Partial<Record<string, string>>[] = [];
+      let nonTradeRows: NonTradeRow[] = [];
       let geminiResult: GeminiExtractionResult | null = null;
 
-      // 4. Optional AI Vision Fallback (Only if local parsing found 0 candidates and Gemini is configured)
-      if (rawCandidates.length === 0 && geminiProvider.isConfigured() && !signal?.aborted) {
+      // 1. Fast path: If Gemini Vision is available, prioritize it for fast, highly accurate extraction
+      if (geminiProvider.isConfigured() && !signal?.aborted) {
         try {
           checkVisionRateLimit(userId);
-          // Run AI Vision with strict non-blocking timeout
           geminiResult = await withTimeout(
-            geminiProvider.extractTrades(imageBuffer, mimeType, ocrResult.text),
+            geminiProvider.extractTrades(imageBuffer, mimeType),
             AI_VISION_TIMEOUT_MS,
             `Gemini Vision timed out after ${AI_VISION_TIMEOUT_MS}ms`
           );
           if (geminiResult && Array.isArray(geminiResult.trades) && geminiResult.trades.length > 0) {
             rawCandidates = geminiResult.trades;
-            if (geminiResult.sourceConfidence > sourceDetection.confidence) {
-              sourceDetection = {
-                source: geminiResult.source,
-                confidence: geminiResult.sourceConfidence,
-                evidence: ["Gemini Vision"],
-              };
-            }
+            sourceDetection = {
+              source: geminiResult.source,
+              confidence: geminiResult.sourceConfidence,
+              evidence: ["Gemini Vision"],
+            };
           }
         } catch (err: unknown) {
-          console.warn("Optional Gemini Vision fallback omitted/failed:", err instanceof Error ? err.message : err);
+          console.warn("Gemini Vision attempt omitted or failed, falling back to local OCR:", err instanceof Error ? err.message : err);
+        }
+      }
+
+      // 2. Local OCR Extraction: Runs if Gemini was not configured or produced 0 trades
+      if (rawCandidates.length === 0 && !signal?.aborted) {
+        const ocrResult = await ocrProvider.readText(imageBuffer, mimeType, signal);
+        ocrText = ocrResult.text;
+
+        if (signal?.aborted) {
+          throw new Error("CLIENT_ABORTED");
+        }
+
+        sourceDetection = detectSource(ocrText);
+        const localResult = parseOcrTextDetailed(ocrText, sourceDetection.source);
+        rawCandidates = localResult.trades;
+        nonTradeRows = localResult.nonTradeRows;
+
+        // 3. Fallback to Gemini Vision with OCR hint if local parsing found 0 candidates
+        if (rawCandidates.length === 0 && geminiProvider.isConfigured() && !geminiResult && !signal?.aborted) {
+          try {
+            checkVisionRateLimit(userId);
+            geminiResult = await withTimeout(
+              geminiProvider.extractTrades(imageBuffer, mimeType, ocrText),
+              AI_VISION_TIMEOUT_MS,
+              `Gemini Vision timed out after ${AI_VISION_TIMEOUT_MS}ms`
+            );
+            if (geminiResult && Array.isArray(geminiResult.trades) && geminiResult.trades.length > 0) {
+              rawCandidates = geminiResult.trades;
+              if (geminiResult.sourceConfidence > sourceDetection.confidence) {
+                sourceDetection = {
+                  source: geminiResult.source,
+                  confidence: geminiResult.sourceConfidence,
+                  evidence: ["Gemini Vision"],
+                };
+              }
+            }
+          } catch (err: unknown) {
+            console.warn("Optional Gemini Vision fallback omitted/failed:", err instanceof Error ? err.message : err);
+          }
         }
       }
 
@@ -136,7 +167,7 @@ export async function processScreenshot(
         normalized.tradingAccountId = tradingAccountId; // assign ownership
 
         // Calculate confidence (passing OCR text for cross-check)
-        evaluateConfidence(normalized, raw, sourceDetection.confidence, geminiResult !== null, ocrResult.text);
+        evaluateConfidence(normalized, raw, sourceDetection.confidence, geminiResult !== null, ocrText);
 
         if (!normalized.isValid || normalized.confidence.level === "LOW") {
           hasUncertainOrInvalidCandidates = true;
