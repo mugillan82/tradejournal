@@ -26,13 +26,39 @@ const COOKIE_PREFIX = "tradejournal";
  * for authoritative validation.
  */
 function getSessionToken(request: NextRequest): string | null {
+  // 1. Direct lookup via request.cookies (handles HTTP & HTTPS __Secure- prefix)
+  const candidateNames = [
+    `__Secure-${COOKIE_PREFIX}.session_token`,
+    `${COOKIE_PREFIX}.session_token`,
+    `__Secure-${COOKIE_PREFIX}_session_token`,
+    `${COOKIE_PREFIX}_session_token`,
+    `__Secure-${COOKIE_PREFIX}-session_token`,
+    `${COOKIE_PREFIX}-session_token`,
+    `__Secure-better-auth.session_token`,
+    `better-auth.session_token`,
+  ];
+
+  for (const name of candidateNames) {
+    const cookie = request.cookies.get(name);
+    if (cookie?.value) {
+      return cookie.value;
+    }
+  }
+
+  // 2. Generic scan across all cookies for session token
+  for (const cookie of request.cookies.getAll()) {
+    if (
+      cookie.name.includes("session_token") ||
+      cookie.name.includes("session-token")
+    ) {
+      return cookie.value;
+    }
+  }
+
+  // 3. Fallback regex over raw cookie header (handles optional __Secure- and any prefix)
   const cookieHeader = request.headers.get("cookie") ?? "";
-  // Match "tradejournal-session_token=<value>" or "tradejournal.session_token=<value>"
   const match = cookieHeader.match(
-    new RegExp(
-      `(?:^|[;\\s])${COOKIE_PREFIX}[-_.]?session_token=([^;\\s]*)`,
-      "i",
-    ),
+    /(?:^|[;\s])(?:__Secure-)?(?:tradejournal|better-auth)?[-_.]?session[-_.]?token=([^;\s]*)/i,
   );
   return match ? decodeURIComponent(match[1] ?? "") : null;
 }
