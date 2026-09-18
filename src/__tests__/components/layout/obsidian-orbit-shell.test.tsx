@@ -33,8 +33,8 @@ describe("Stitch Obsidian Orbit Design System & Shell", () => {
   describe("BrandMark", () => {
     it("renders Obsidian Orbit monogram and wordmark correctly", () => {
       render(<BrandMark size="md" showWordmark={true} />);
-      expect(screen.getByText("Trade")).toBeDefined();
-      expect(screen.getByText("Journal")).toBeDefined();
+      expect(screen.getByText("KAI")).toBeDefined();
+      expect(screen.getByText("VO")).toBeDefined();
       expect(screen.getByText("Orbit")).toBeDefined();
     });
 

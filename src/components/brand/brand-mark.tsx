@@ -95,7 +95,7 @@ export function BrandMark({
             <span
               className={`${wordmarkSize} font-bold tracking-tight text-slate-100`}
             >
-              Trade<span className="text-purple-400">Journal</span>
+              KAI<span className="text-purple-400">VO</span>
             </span>
             <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300 font-semibold">
               Orbit

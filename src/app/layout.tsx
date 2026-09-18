@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TradeJournal",
-  description: "TradeJournal - Modern Trading Log & Analytics",
+  title: "KAIVO",
+  description: "KAIVO - Modern Trading Log & Analytics",
 };
 
 export default function RootLayout({

@@ -45,7 +45,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       {/* Footer */}
       <footer className="relative z-10 border-t border-slate-800/60 px-6 py-4 text-center">
         <p className="text-xs text-slate-600">
-          &copy; {new Date().getFullYear()} TradeJournal. All rights reserved.
+          &copy; {new Date().getFullYear()} KAIVO. All rights reserved.
         </p>
       </footer>
     </div>

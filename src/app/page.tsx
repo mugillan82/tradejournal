@@ -18,14 +18,25 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-950 text-slate-100">
-      <div className="max-w-md w-full space-y-8 text-center">
-        <BrandMark size="lg" />
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-50">
-            TradeJournal
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-950 text-slate-100 relative overflow-hidden">
+      {/* Ambient background glow */}
+      <div
+        className="fixed inset-0 pointer-events-none overflow-hidden"
+        aria-hidden="true"
+      >
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-purple-600/[0.08] rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-[400px] h-[250px] bg-violet-600/[0.05] rounded-full blur-[100px]" />
+      </div>
+
+      <div className="max-w-md w-full space-y-8 text-center relative z-10">
+        <div className="flex justify-center">
+          <BrandMark size="lg" />
+        </div>
+        <div className="space-y-3">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-50">
+            KAIVO
           </h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm sm:text-base text-slate-400 max-w-sm mx-auto">
             A modern trading log and analytics platform. Log every trade,
             review your edge, and improve with data.
           </p>
@@ -34,13 +45,13 @@ export default async function HomePage() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <Link
             href="/sign-in"
-            className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-500 transition-colors duration-150"
+            className="inline-flex items-center justify-center rounded-lg bg-purple-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-purple-500 transition-all duration-150 shadow-lg shadow-purple-900/30 hover:shadow-purple-700/40"
           >
             Sign in
           </Link>
           <Link
             href="/sign-up"
-            className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 px-5 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-700 transition-colors duration-150"
+            className="inline-flex items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900/80 px-6 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800 hover:text-white transition-all duration-150"
           >
             Create account
           </Link>
