@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Database } from "@/components/icons";
+import { StrokeText } from "@/components/ui/stroke-text";
 
 export function DataManagementHeader() {
   return (
@@ -11,8 +12,20 @@ export function DataManagementHeader() {
           <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <Database size={20} />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Data Management & Export
+          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl flex items-center min-h-[36px]">
+            <StrokeText
+              text="Data Management & Export"
+              fontSize={28}
+              fontWeight={700}
+              strokeColor="#a855f7"
+              fillColor="#f8fafc"
+              strokeWidth={1.3}
+              drawDuration={1.2}
+              fillDelay={0.15}
+              fillMode="wipe"
+              trigger="mount"
+              replayOnHover
+            />
           </h1>
         </div>
         <p className="text-sm text-zinc-400">

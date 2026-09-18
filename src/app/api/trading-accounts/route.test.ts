@@ -477,6 +477,20 @@ describe("DELETE /api/trading-accounts/[id]", () => {
     expect(mockDeleteTradingAccount).toHaveBeenCalledWith(ACCOUNT_A);
   });
 
+  it("forwards cascade option when cascade=true query param is present", async () => {
+    mockDeleteTradingAccount.mockResolvedValue(undefined);
+
+    const request = new NextRequest(`http://localhost:3000/api/trading-accounts/${ACCOUNT_A}?cascade=true`, {
+      method: "DELETE",
+    });
+
+    const route = await import("./[id]/route");
+    const response = await route.DELETE(request, { params: { id: ACCOUNT_A } });
+
+    expect(response.status).toBe(204);
+    expect(mockDeleteTradingAccount).toHaveBeenCalledWith(ACCOUNT_A, { cascade: true });
+  });
+
   it("returns 404 when account does not exist or belongs to another user", async () => {
     mockDeleteTradingAccount.mockRejectedValue(createNotFoundError("TradingAccount"));
 

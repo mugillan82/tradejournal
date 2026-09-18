@@ -11,6 +11,7 @@ import {
   Loader2,
   Search,
 } from "@/components/icons";
+import { StrokeText } from "@/components/ui/stroke-text";
 import {
   fetchTagsClient,
   createTagClient,
@@ -160,8 +161,20 @@ export default function TagsPage() {
         <div>
           <div className="flex items-center gap-2">
             <Tag size={22} className="text-emerald-400" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-100">
-              Trade Tags
+            <h1 className="text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl flex items-center min-h-[36px]">
+              <StrokeText
+                text="Trade Tags"
+                fontSize={28}
+                fontWeight={700}
+                strokeColor="#a855f7"
+                fillColor="#f8fafc"
+                strokeWidth={1.3}
+                drawDuration={1.2}
+                fillDelay={0.15}
+                fillMode="wipe"
+                trigger="mount"
+                replayOnHover
+              />
             </h1>
           </div>
           <p className="text-sm text-slate-400 mt-1">

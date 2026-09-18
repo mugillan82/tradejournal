@@ -8,6 +8,7 @@
 "use client";
 
 import React from "react";
+import { StrokeText } from "@/components/ui/stroke-text";
 
 interface CalendarHeaderProps {
   currentMonth: string; // YYYY-MM
@@ -78,8 +79,20 @@ export function CalendarHeader({
     >
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
-            <span>Trading Calendar</span>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100 flex items-center gap-2 min-h-[36px]">
+            <StrokeText
+              text="Trading Calendar"
+              fontSize={28}
+              fontWeight={700}
+              strokeColor="#a855f7"
+              fillColor="#f8fafc"
+              strokeWidth={1.3}
+              drawDuration={1.2}
+              fillDelay={0.15}
+              fillMode="wipe"
+              trigger="mount"
+              replayOnHover
+            />
             {isRefreshing && (
               <span className="inline-flex items-center gap-1 text-xs text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full font-normal">
                 <svg

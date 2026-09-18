@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Keyboard,
 } from "@/components/icons";
+import { StrokeText } from "@/components/ui/stroke-text";
 
 interface HelpTopic {
   id: string;
@@ -210,9 +211,21 @@ export function HelpClientPage() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-8" data-testid="help-page">
       {/* Header */}
       <div className="border-b border-slate-800/80 pb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-100 flex items-center gap-2.5">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl flex items-center gap-2.5 min-h-[36px]">
           <HelpCircle size={26} className="text-emerald-400" />
-          Product Documentation & User Guide
+          <StrokeText
+            text="Product Documentation & User Guide"
+            fontSize={28}
+            fontWeight={700}
+            strokeColor="#a855f7"
+            fillColor="#f8fafc"
+            strokeWidth={1.3}
+            drawDuration={1.2}
+            fillDelay={0.15}
+            fillMode="wipe"
+            trigger="mount"
+            replayOnHover
+          />
         </h1>
         <p className="text-sm text-slate-400 mt-1">
           Explore workflows, trading formulas, import procedures, and platform customization.

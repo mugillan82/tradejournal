@@ -13,6 +13,7 @@ import {
   Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StrokeText } from "@/components/ui/stroke-text";
 
 export function ImportCenterClientPage() {
   return (
@@ -25,7 +26,21 @@ export function ImportCenterClientPage() {
               Batch E Unified Import Pipeline
             </span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Trade Import Center</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center min-h-[38px]">
+            <StrokeText
+              text="Trade Import Center"
+              fontSize={28}
+              fontWeight={700}
+              strokeColor="#a855f7"
+              fillColor="#f8fafc"
+              strokeWidth={1.3}
+              drawDuration={1.2}
+              fillDelay={0.15}
+              fillMode="wipe"
+              trigger="mount"
+              replayOnHover
+            />
+          </h1>
           <p className="text-slate-400 mt-1.5 max-w-2xl text-sm leading-relaxed">
             Import your historical and ongoing trading activity into TradeJournal. Choose between AI vision
             screenshot recognition, structured CSV exports, or multi-sheet Excel workbooks.

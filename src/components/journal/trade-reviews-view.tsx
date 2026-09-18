@@ -20,6 +20,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { StrokeText } from "@/components/ui/stroke-text";
 import {
   ClipboardList,
   PlusCircle,
@@ -390,7 +391,21 @@ export function TradeReviewsView() {
             <ClipboardList size={22} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Trade Reviews</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl flex items-center min-h-[36px]">
+              <StrokeText
+                text="Trade Reviews"
+                fontSize={28}
+                fontWeight={700}
+                strokeColor="#a855f7"
+                fillColor="#f8fafc"
+                strokeWidth={1.3}
+                drawDuration={1.2}
+                fillDelay={0.15}
+                fillMode="wipe"
+                trigger="mount"
+                replayOnHover
+              />
+            </h1>
             <p className="text-sm text-slate-400">
               Structured retrospective analysis, execution ratings, and rules adherence.
             </p>

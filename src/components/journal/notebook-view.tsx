@@ -16,6 +16,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { StrokeText } from "@/components/ui/stroke-text";
 import {
   BookOpen,
   PlusCircle,
@@ -282,7 +283,21 @@ export function NotebookView() {
             <BookOpen size={22} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Trading Notebook</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl flex items-center min-h-[36px]">
+              <StrokeText
+                text="Trading Notebook"
+                fontSize={28}
+                fontWeight={700}
+                strokeColor="#a855f7"
+                fillColor="#f8fafc"
+                strokeWidth={1.3}
+                drawDuration={1.2}
+                fillDelay={0.15}
+                fillMode="wipe"
+                trigger="mount"
+                replayOnHover
+              />
+            </h1>
             <p className="text-sm text-slate-400">
               Personal research workspace, playbooks, setups, and trading ideas.
             </p>

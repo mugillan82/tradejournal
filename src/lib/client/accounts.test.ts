@@ -217,6 +217,18 @@ describe("Accounts Client Data Layer", () => {
       await expect(deleteTradingAccountClient("acc-1")).resolves.toBeUndefined();
     });
 
+    it("sends DELETE request with cascade query param when cascade option is true", async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 204,
+      } as unknown as Response);
+
+      await expect(deleteTradingAccountClient("acc-1", { cascade: true })).resolves.toBeUndefined();
+      expect(global.fetch).toHaveBeenCalledWith("/api/trading-accounts/acc-1?cascade=true", expect.objectContaining({
+        method: "DELETE",
+      }));
+    });
+
     it("throws on delete failure", async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
@@ -232,6 +244,36 @@ describe("Accounts Client Data Layer", () => {
       await expect(deleteTradingAccountClient("acc-1")).rejects.toThrow(
         TradingAccountClientApiError,
       );
+    });
+  });
+
+  describe("deactivateTradingAccountClient", () => {
+    it("sends PATCH request with isActive: false", async () => {
+      const mockResult = {
+        id: "acc-1",
+        userId: "user-1",
+        name: "Main",
+        type: "PAPER_TRADING",
+        currency: "USD",
+        initialBalance: "10000.00",
+        currentBalance: "10000.00",
+        isActive: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockResult,
+      } as unknown as Response);
+
+      const { deactivateTradingAccountClient } = await import("./accounts");
+      const result = await deactivateTradingAccountClient("acc-1");
+      expect(result.isActive).toBe(false);
+      expect(global.fetch).toHaveBeenCalledWith("/api/trading-accounts/acc-1", expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ isActive: false }),
+      }));
     });
   });
 });

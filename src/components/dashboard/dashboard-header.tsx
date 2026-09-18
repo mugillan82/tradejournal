@@ -9,6 +9,7 @@
 import React from "react";
 import { RefreshCw, LayoutDashboard, Sliders, Plus, Minus } from "@/components/icons";
 import type { TradingAccountDto } from "@/lib/client/dashboard";
+import { StrokeText } from "@/components/ui/stroke-text";
 
 interface DashboardHeaderProps {
   accounts: ReadonlyArray<TradingAccountDto>;
@@ -39,8 +40,20 @@ export function DashboardHeader({
             <LayoutDashboard className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-100 sm:text-2xl">
-              Trading Command Center
+            <h1 className="text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl flex items-center min-h-[36px]">
+              <StrokeText
+                text="Trading Command Center"
+                fontSize={28}
+                fontWeight={700}
+                strokeColor="#a855f7"
+                fillColor="#f8fafc"
+                strokeWidth={1.3}
+                drawDuration={1.2}
+                fillDelay={0.15}
+                fillMode="wipe"
+                trigger="mount"
+                replayOnHover
+              />
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
               Real-time performance metrics, trading journal context, and portfolio analytics.

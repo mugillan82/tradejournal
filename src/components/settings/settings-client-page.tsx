@@ -18,6 +18,7 @@ import {
   ExternalLink,
   ShieldAlert,
 } from "@/components/icons";
+import { StrokeText } from "@/components/ui/stroke-text";
 import { useSettings } from "@/components/settings/settings-provider";
 import {
   ALLOWED_DATE_FORMATS,
@@ -323,9 +324,21 @@ export function SettingsClientPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100 flex items-center gap-2.5">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl flex items-center gap-2.5 min-h-[36px]">
             <SettingsIcon size={24} className="text-emerald-400" />
-            Product Settings & Customization
+            <StrokeText
+              text="Product Settings & Customization"
+              fontSize={28}
+              fontWeight={700}
+              strokeColor="#a855f7"
+              fillColor="#f8fafc"
+              strokeWidth={1.3}
+              drawDuration={1.2}
+              fillDelay={0.15}
+              fillMode="wipe"
+              trigger="mount"
+              replayOnHover
+            />
           </h1>
           <p className="text-sm text-slate-400 mt-1">
             Configure your profile, trading defaults, display formatting, and dashboard layout.

@@ -315,10 +315,18 @@ export async function updateTradingAccount(
   }
 }
 
+export interface DeleteTradingAccountOptions {
+  readonly cascade?: boolean;
+}
+
 /**
  * Deletes a TradingAccount owned by the authenticated user.
+ * If cascade is true, all trades belonging to this account are also deleted.
  */
-export async function deleteTradingAccount(id: string): Promise<void> {
+export async function deleteTradingAccount(
+  id: string,
+  options?: DeleteTradingAccountOptions,
+): Promise<void> {
   const userId = await resolveUserId();
 
   if (!id || typeof id !== "string") {
@@ -332,6 +340,30 @@ export async function deleteTradingAccount(id: string): Promise<void> {
         select: { id: true },
       });
       if (!existing) return false;
+
+      // Check if account has associated trades
+      if ("trade" in tx && typeof (tx as any).trade?.count === "function") {
+        const tradeCount = await (tx as any).trade.count({
+          where: { tradingAccountId: id },
+        });
+
+        if (tradeCount > 0) {
+          if (options?.cascade) {
+            await (tx as any).trade.deleteMany({
+              where: { tradingAccountId: id },
+            });
+          } else {
+            throw createValidationError([
+              {
+                path: "id",
+                message:
+                  "Cannot delete account with associated trades. Deactivate it instead, or delete with all associated trades.",
+              },
+            ]);
+          }
+        }
+      }
+
       await tx.tradingAccount.delete({ where: { id } });
       return true;
     });
@@ -341,18 +373,40 @@ export async function deleteTradingAccount(id: string): Promise<void> {
     }
   } catch (err) {
     if (err instanceof Error && err.name === "TradeServiceError") throw err;
+
+    // Prisma foreign key constraint violation (P2003 or P2014)
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2003"
+      (err.code === "P2003" || err.code === "P2014")
     ) {
       throw createValidationError([
         {
           path: "id",
           message:
-            "Cannot delete account with associated trades. Deactivate it instead.",
+            "Cannot delete account with associated trades. Deactivate it instead, or delete with all associated trades.",
         },
       ]);
     }
+
+    // PostgreSQL 23001 RESTRICT violation, surfaced via PrismaClientUnknownRequestError
+    if (
+      err instanceof Error &&
+      (err.message.includes("23001") ||
+        err.message.includes("violates RESTRICT setting") ||
+        err.message.includes("Trade_tradingAccountId_fkey") ||
+        err.message.includes("foreign key constraint"))
+    ) {
+      throw createValidationError([
+        {
+          path: "id",
+          message:
+            "Cannot delete account with associated trades. Deactivate it instead, or delete with all associated trades.",
+        },
+      ]);
+    }
+
+    console.error("deleteTradingAccount database error:", err);
     throw createDatabaseError(err);
   }
 }
+

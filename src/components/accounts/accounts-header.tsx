@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Wallet, Plus } from "@/components/icons";
+import { StrokeText } from "@/components/ui/stroke-text";
 
 interface AccountsHeaderProps {
   onAddAccount: () => void;
@@ -15,8 +16,20 @@ export function AccountsHeader({ onAddAccount }: AccountsHeaderProps) {
           <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
             <Wallet size={20} />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">
-            Trading Accounts
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl flex items-center min-h-[36px]">
+            <StrokeText
+              text="Trading Accounts"
+              fontSize={28}
+              fontWeight={700}
+              strokeColor="#a855f7"
+              fillColor="#f8fafc"
+              strokeWidth={1.3}
+              drawDuration={1.2}
+              fillDelay={0.15}
+              fillMode="wipe"
+              trigger="mount"
+              replayOnHover
+            />
           </h1>
         </div>
         <p className="text-sm text-slate-400">

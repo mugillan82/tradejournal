@@ -28,6 +28,7 @@ import {
   Copy,
   Check,
 } from "@/components/icons";
+import { StrokeText } from "@/components/ui/stroke-text";
 
 import {
   fetchTradeById,
@@ -340,8 +341,20 @@ export function TradeDetailView({ tradeId }: TradeDetailViewProps) {
                   </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-100 tracking-tight">
-                  {trade.title || `Trade #${trade.id.slice(0, 8)}`}
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-100 tracking-tight flex items-center min-h-[36px]">
+                  <StrokeText
+                    text={trade.title || `Trade #${trade.id.slice(0, 8)}`}
+                    fontSize={28}
+                    fontWeight={800}
+                    strokeColor="#a855f7"
+                    fillColor="#f8fafc"
+                    strokeWidth={1.3}
+                    drawDuration={1.2}
+                    fillDelay={0.15}
+                    fillMode="wipe"
+                    trigger="mount"
+                    replayOnHover
+                  />
                 </h1>
 
                 <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">

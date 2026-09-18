@@ -35,6 +35,8 @@ const mockTradingAccountFindMany = vi.fn();
 const mockTradingAccountCount = vi.fn();
 const mockTradingAccountUpdate = vi.fn();
 const mockTradingAccountDelete = vi.fn();
+const mockTradeCount = vi.fn();
+const mockTradeDeleteMany = vi.fn();
 const mockTransaction = vi.fn();
 
 vi.mock("@/lib/db/client", () => ({
@@ -53,6 +55,10 @@ vi.mock("@/lib/db/client", () => ({
           tradingAccount: {
             findFirst: (...a: unknown[]) => mockTradingAccountFindFirst(...a),
             delete: (...a: unknown[]) => mockTradingAccountDelete(...a),
+          },
+          trade: {
+            count: (...a: unknown[]) => mockTradeCount(...a),
+            deleteMany: (...a: unknown[]) => mockTradeDeleteMany(...a),
           },
         });
       }
@@ -289,6 +295,40 @@ describe("TradingAccount Service — Update & Delete", () => {
         err.code === "VALIDATION" &&
         err.message.includes("associated trades")
       );
+    });
+  });
+
+  it("throws VALIDATION error when deletion fails with PostgreSQL 23001 RESTRICT error", async () => {
+    mockTradingAccountFindFirst.mockResolvedValue({ id: ACCOUNT_A });
+    const pgRestrictErr = new Error(
+      'update or delete on table "trading_account" violates RESTRICT setting of foreign key constraint "Trade_tradingAccountId_fkey" on table "Trade"',
+    );
+    mockTradingAccountDelete.mockRejectedValue(pgRestrictErr);
+
+    await expect(
+      deleteTradingAccount(ACCOUNT_A),
+    ).rejects.toSatisfy((err: unknown) => {
+      return (
+        err instanceof TradeServiceError &&
+        err.code === "VALIDATION" &&
+        err.message.includes("associated trades")
+      );
+    });
+  });
+
+  it("deletes account and cascades trades when cascade option is true", async () => {
+    mockTradingAccountFindFirst.mockResolvedValue({ id: ACCOUNT_A });
+    mockTradeCount.mockResolvedValue(5);
+    mockTradeDeleteMany.mockResolvedValue({ count: 5 });
+    mockTradingAccountDelete.mockResolvedValue(rawRecord);
+
+    await deleteTradingAccount(ACCOUNT_A, { cascade: true });
+
+    expect(mockTradeDeleteMany).toHaveBeenCalledWith({
+      where: { tradingAccountId: ACCOUNT_A },
+    });
+    expect(mockTradingAccountDelete).toHaveBeenCalledWith({
+      where: { id: ACCOUNT_A },
     });
   });
 });

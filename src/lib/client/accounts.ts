@@ -238,9 +238,17 @@ export async function updateTradingAccountClient(
 
 /**
  * Deletes a trading account by ID.
+ * If cascade is true, all trades belonging to this account are also deleted.
  */
-export async function deleteTradingAccountClient(id: string): Promise<void> {
-  const response = await fetch(`/api/trading-accounts/${encodeURIComponent(id)}`, {
+export async function deleteTradingAccountClient(
+  id: string,
+  options?: { cascade?: boolean },
+): Promise<void> {
+  const url = options?.cascade
+    ? `/api/trading-accounts/${encodeURIComponent(id)}?cascade=true`
+    : `/api/trading-accounts/${encodeURIComponent(id)}`;
+
+  const response = await fetch(url, {
     method: "DELETE",
     headers: { Accept: "application/json" },
     cache: "no-store",
@@ -263,3 +271,11 @@ export async function deleteTradingAccountClient(id: string): Promise<void> {
     throw new TradingAccountClientApiError(errorMsg, response.status, errorCode, fieldErrors);
   }
 }
+
+/**
+ * Deactivates a trading account by setting isActive to false.
+ */
+export async function deactivateTradingAccountClient(id: string): Promise<TradingAccountDto> {
+  return updateTradingAccountClient(id, { isActive: false });
+}
+

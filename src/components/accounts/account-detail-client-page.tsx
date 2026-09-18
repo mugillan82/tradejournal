@@ -33,6 +33,7 @@ import {
   AlertCircle,
   CheckCircle,
 } from "@/components/icons";
+import { StrokeText } from "@/components/ui/stroke-text";
 
 interface AccountDetailClientPageProps {
   id: string;
@@ -305,7 +306,21 @@ export function AccountDetailClientPage({ id }: AccountDetailClientPageProps) {
               <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <Wallet size={22} />
               </div>
-              <h1 className="text-2xl font-bold text-slate-100">{account.name}</h1>
+              <h1 className="text-2xl font-bold text-slate-100 sm:text-3xl flex items-center min-h-[36px]">
+                <StrokeText
+                  text={account.name}
+                  fontSize={28}
+                  fontWeight={700}
+                  strokeColor="#a855f7"
+                  fillColor="#f8fafc"
+                  strokeWidth={1.3}
+                  drawDuration={1.2}
+                  fillDelay={0.15}
+                  fillMode="wipe"
+                  trigger="mount"
+                  replayOnHover
+                />
+              </h1>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium border ${typeInfo.bg} ${typeInfo.text} ${typeInfo.border}`}
               >

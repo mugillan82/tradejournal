@@ -27,6 +27,7 @@ export function handleTradingAccountApiError(err: unknown): NextResponse<unknown
   }
 
   // Unexpected errors — return generic 500 without leaking internal details
+  console.error("Unexpected trading account API error:", err);
   return NextResponse.json(
     {
       error: {

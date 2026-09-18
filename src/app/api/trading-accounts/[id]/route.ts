@@ -108,7 +108,7 @@ export async function PATCH(
 // ---------------------------------------------------------------------------
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> | { id: string } },
 ): Promise<NextResponse<unknown>> {
   const authResponse = await authenticateRequest();
@@ -116,7 +116,12 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    await deleteTradingAccount(id);
+    const cascade = request.nextUrl.searchParams.get("cascade") === "true";
+    if (cascade) {
+      await deleteTradingAccount(id, { cascade: true });
+    } else {
+      await deleteTradingAccount(id);
+    }
     return new NextResponse(null, {
       status: 204,
       headers: { "Cache-Control": "no-store" },
