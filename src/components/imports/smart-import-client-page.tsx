@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { CheckCircle2, AlertCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
@@ -12,6 +12,7 @@ import { SourceDetectionResult } from "@/lib/trading/smart-import/types";
 import type { NormalizedTradeCandidate } from "@/lib/trading/import/types";
 import type { ConfirmImportResult } from "@/lib/trading/import/service";
 import { validateCandidate } from "@/lib/trading/import/validation";
+import { DuplicateResolutionModal } from "./duplicate-resolution-modal";
 
 interface ImportPreview {
   candidates: NormalizedTradeCandidate[];
@@ -30,6 +31,7 @@ export function SmartImportClientPage() {
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
   const [status, setStatus] = useState<ImportStatus>("IDLE");
   const [error, setError] = useState("");
 
@@ -182,8 +184,11 @@ export function SmartImportClientPage() {
     }
   };
 
-  const handleConfirm = async () => {
-    if (!preview || preview.candidates.length === 0) return;
+  const executeConfirm = async (
+    candidatesToImport: NormalizedTradeCandidate[],
+    allowDuplicates = false
+  ) => {
+    if (candidatesToImport.length === 0) return;
 
     setIsConfirming(true);
     setError("");
@@ -193,8 +198,11 @@ export function SmartImportClientPage() {
       if (file) {
         // Send multipart form data preserving original screenshot as evidence
         const formData = new FormData();
-        formData.append("candidates", JSON.stringify(preview.candidates));
+        formData.append("candidates", JSON.stringify(candidatesToImport));
         formData.append("evidence", file);
+        if (allowDuplicates) {
+          formData.append("allowDuplicates", "true");
+        }
         res = await fetch("/api/imports/confirm", {
           method: "POST",
           body: formData,
@@ -203,7 +211,7 @@ export function SmartImportClientPage() {
         res = await fetch("/api/imports/confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ candidates: preview.candidates }),
+          body: JSON.stringify({ candidates: candidatesToImport, allowDuplicates }),
         });
       }
 
@@ -211,11 +219,35 @@ export function SmartImportClientPage() {
       if (!res.ok) throw new Error(data.error?.message || "Failed to confirm import");
 
       setImportResult(data);
+      setIsDuplicateModalOpen(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to confirm import");
     } finally {
       setIsConfirming(false);
     }
+  };
+
+  const handleConfirm = () => {
+    if (!preview || preview.candidates.length === 0) return;
+
+    const hasDuplicates = preview.candidates.some(
+      (c) => c.duplicateMatch && c.duplicateMatch.classification !== "NONE"
+    );
+
+    if (hasDuplicates) {
+      setIsDuplicateModalOpen(true);
+      return;
+    }
+
+    executeConfirm(preview.candidates, false);
+  };
+
+  const handleConfirmOnlyNew = (newCandidates: NormalizedTradeCandidate[]) => {
+    executeConfirm(newCandidates, false);
+  };
+
+  const handleConfirmAll = (allCandidates: NormalizedTradeCandidate[]) => {
+    executeConfirm(allCandidates, true);
   };
 
   const handleCandidateChange = (
@@ -379,6 +411,26 @@ export function SmartImportClientPage() {
             )}
           </div>
 
+          {preview.duplicateCount > 0 && (
+            <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-3 text-xs text-amber-200">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>{preview.duplicateCount} duplicate trade(s) detected.</strong> You can choose to import only new trades or add all trades.
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsDuplicateModalOpen(true)}
+                className="shrink-0 border-amber-500/40 text-amber-200 hover:bg-amber-500/20 hover:text-white text-xs h-7 px-2.5"
+              >
+                Resolve Duplicates
+              </Button>
+            </div>
+          )}
+
           <div className="rounded-md border">
             <table className="w-full text-sm">
               <thead>
@@ -509,11 +561,31 @@ export function SmartImportClientPage() {
             >
               Go Back
             </Button>
-            <Button onClick={handleConfirm} disabled={isConfirming || preview.readyCount === 0}>
+            <Button
+              onClick={handleConfirm}
+              disabled={
+                isConfirming ||
+                preview.candidates.length === 0 ||
+                preview.errorCount === preview.candidates.length
+              }
+            >
               {isConfirming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isConfirming ? "Importing..." : `Import ${preview.readyCount} Trades`}
+              {isConfirming
+                ? "Importing..."
+                : preview.duplicateCount > 0
+                ? `Import Trades (${preview.candidates.length - preview.duplicateCount} New)`
+                : `Import ${preview.readyCount} Trades`}
             </Button>
           </div>
+
+          <DuplicateResolutionModal
+            isOpen={isDuplicateModalOpen}
+            onClose={() => setIsDuplicateModalOpen(false)}
+            candidates={preview.candidates}
+            onConfirmOnlyNew={handleConfirmOnlyNew}
+            onConfirmAll={handleConfirmAll}
+            isConfirming={isConfirming}
+          />
         </div>
       )}
 

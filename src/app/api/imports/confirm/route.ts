@@ -16,10 +16,16 @@ export async function POST(request: NextRequest) {
   const contentType = request.headers.get("content-type") || "";
   let candidates: NormalizedTradeCandidate[] = [];
   const evidenceMap: Record<string, ConfirmImportEvidenceItem> = {};
+  let allowDuplicates = false;
 
   if (contentType.includes("multipart/form-data")) {
     try {
       const formData = await request.formData();
+      const allowDuplicatesRaw = formData.get("allowDuplicates");
+      if (allowDuplicatesRaw === "true" || allowDuplicatesRaw === "1") {
+        allowDuplicates = true;
+      }
+
       const candidatesRaw = formData.get("candidates");
       if (!candidatesRaw || typeof candidatesRaw !== "string") {
         return NextResponse.json({ error: { message: "candidates array is required" } }, { status: 400 });
@@ -71,6 +77,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: { message: "candidates array is required" } }, { status: 400 });
     }
 
+    if ("allowDuplicates" in body && Boolean((body as { allowDuplicates?: boolean }).allowDuplicates)) {
+      allowDuplicates = true;
+    }
+
     candidates = (body as { candidates: NormalizedTradeCandidate[] }).candidates;
     if (!Array.isArray(candidates)) {
       return NextResponse.json({ error: { message: "candidates array is required" } }, { status: 400 });
@@ -96,7 +106,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await confirmImport(candidates, Object.keys(evidenceMap).length > 0 ? evidenceMap : undefined);
+    const result = await confirmImport(
+      candidates,
+      Object.keys(evidenceMap).length > 0 ? evidenceMap : undefined,
+      { allowDuplicates }
+    );
 
     // Return 200 with result
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });

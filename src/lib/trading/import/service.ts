@@ -205,6 +205,10 @@ export interface ConfirmImportEvidenceItem {
   buffer: Buffer;
 }
 
+export interface ConfirmImportOptions {
+  allowDuplicates?: boolean;
+}
+
 export interface ConfirmImportResult {
   successful: number;
   failed: number;
@@ -222,7 +226,8 @@ export interface ConfirmImportResult {
  */
 export async function confirmImport(
   candidates: NormalizedTradeCandidate[],
-  evidenceMap?: Record<string, ConfirmImportEvidenceItem>
+  evidenceMap?: Record<string, ConfirmImportEvidenceItem>,
+  options?: ConfirmImportOptions
 ): Promise<ConfirmImportResult> {
   await resolveUserId();
 
@@ -307,7 +312,7 @@ export async function confirmImport(
     const sameBatchCandidates = candidates.slice(0, i); // Only candidates processed BEFORE this one in the batch
     const duplicateMatch = detectDuplicate(validated, existingTrades, sameBatchCandidates);
     
-    if (duplicateMatch.classification === "EXACT") {
+    if (duplicateMatch.classification === "EXACT" && !options?.allowDuplicates) {
       failed++;
       errors.push({
         candidateId: candidate.candidateId,
