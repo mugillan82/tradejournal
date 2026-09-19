@@ -6,7 +6,7 @@ test.describe("Public & Authentication Flows", () => {
 
     // Verify main brand heading and copy
     await expect(page.getByRole("heading", { name: /KAIVO|TradeJournal/i })).toBeVisible();
-    await expect(page.getByTestId("scrambled-quotes-container")).toBeVisible();
+    await expect(page.getByTestId(/quotes-container/)).toBeVisible();
 
     // Verify CTAs
     const signInLink = page.getByRole("link", { name: "Sign in" });

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/auth/session";
-import { ScrambledQuotes } from "@/components/ui/scrambled-quotes";
+import { ShuffleQuotes } from "@/components/ui/shuffle-quotes";
 
 /**
  * / (Home)
@@ -33,7 +33,7 @@ export default async function HomePage() {
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-50 drop-shadow-[0_0_35px_rgba(168,85,247,0.25)]">
             KAI<span className="text-purple-400">VO</span>
           </h1>
-          <ScrambledQuotes />
+          <ShuffleQuotes />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
