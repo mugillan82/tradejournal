@@ -6,6 +6,8 @@
  * and high-precision tracking typography.
  */
 
+import { GlitchText } from "@/components/ui/glitch-text";
+
 interface BrandMarkProps {
   size?: "sm" | "md" | "lg";
   showWordmark?: boolean;
@@ -27,6 +29,12 @@ export function BrandMark({
     sm: "text-sm",
     md: "text-base",
     lg: "text-xl",
+  }[size];
+
+  const glitchOffset = {
+    sm: 1.5,
+    md: 2,
+    lg: 2.5,
   }[size];
 
   return (
@@ -92,11 +100,14 @@ export function BrandMark({
       {showWordmark && (
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-1.5">
-            <span
+            <GlitchText
+              speed={0.8}
+              offset={glitchOffset}
+              text="KAIVO"
               className={`${wordmarkSize} font-bold tracking-tight text-slate-100`}
             >
               KAI<span className="text-purple-400">VO</span>
-            </span>
+            </GlitchText>
             <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300 font-semibold">
               Orbit
             </span>

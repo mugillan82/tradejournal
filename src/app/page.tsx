@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/auth/session";
 import { ShuffleQuotes } from "@/components/ui/shuffle-quotes";
 import { StarBorder } from "@/components/ui/star-border";
+import { GlitchText } from "@/components/ui/glitch-text";
 
 /**
  * / (Home)
@@ -32,7 +33,9 @@ export default async function HomePage() {
       <div className="max-w-md w-full space-y-8 text-center relative z-10">
         <div className="space-y-4">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-50 drop-shadow-[0_0_35px_rgba(168,85,247,0.25)]">
-            KAI<span className="text-purple-400">VO</span>
+            <GlitchText speed={0.8} offset={5} text="KAIVO">
+              KAI<span className="text-purple-400">VO</span>
+            </GlitchText>
           </h1>
           <ShuffleQuotes />
         </div>
