@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/auth/session";
+import { ScrambledQuotes } from "@/components/ui/scrambled-quotes";
 
 /**
  * / (Home)
@@ -32,10 +33,7 @@ export default async function HomePage() {
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-50 drop-shadow-[0_0_35px_rgba(168,85,247,0.25)]">
             KAI<span className="text-purple-400">VO</span>
           </h1>
-          <p className="text-sm sm:text-base text-slate-400 max-w-sm mx-auto leading-relaxed">
-            A modern trading log and analytics platform. Log every trade,
-            review your edge, and improve with data.
-          </p>
+          <ScrambledQuotes />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">

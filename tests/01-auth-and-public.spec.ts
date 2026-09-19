@@ -5,10 +5,8 @@ test.describe("Public & Authentication Flows", () => {
     await page.goto("/");
 
     // Verify main brand heading and copy
-    await expect(page.getByRole("heading", { name: "TradeJournal" })).toBeVisible();
-    await expect(
-      page.getByText("A modern trading log and analytics platform", { exact: false }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /KAIVO|TradeJournal/i })).toBeVisible();
+    await expect(page.getByTestId("scrambled-quotes-container")).toBeVisible();
 
     // Verify CTAs
     const signInLink = page.getByRole("link", { name: "Sign in" });
