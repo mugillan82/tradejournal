@@ -33,7 +33,7 @@ export default async function HomePage() {
       <div className="max-w-md w-full space-y-8 text-center relative z-10">
         <div className="space-y-4">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-50 drop-shadow-[0_0_35px_rgba(168,85,247,0.25)]">
-            <GlitchText speed={0.8} offset={5} text="KAIVO">
+            <GlitchText speed={1.35} offset={3.5} text="KAIVO">
               KAI<span className="text-purple-400">VO</span>
             </GlitchText>
           </h1>

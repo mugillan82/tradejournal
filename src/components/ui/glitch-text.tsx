@@ -26,7 +26,7 @@ interface CustomCSSProperties extends CSSProperties {
 export function GlitchText({
   children,
   text,
-  speed = 0.8,
+  speed = 1.35,
   enableShadows = true,
   enableOnHover = false,
   className = "",

@@ -32,9 +32,9 @@ export function BrandMark({
   }[size];
 
   const glitchOffset = {
-    sm: 1.5,
-    md: 2,
-    lg: 2.5,
+    sm: 1.2,
+    md: 1.5,
+    lg: 2,
   }[size];
 
   return (
@@ -101,7 +101,7 @@ export function BrandMark({
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-1.5">
             <GlitchText
-              speed={0.8}
+              speed={1.35}
               offset={glitchOffset}
               text="KAIVO"
               className={`${wordmarkSize} font-bold tracking-tight text-slate-100`}
