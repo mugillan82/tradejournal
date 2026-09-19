@@ -10,8 +10,6 @@
 
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -22,8 +20,9 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { BrandMark } from "@/components/brand/brand-mark";
-import { navigation, type NavSection } from "@/lib/navigation";
-import { Menu, X, Sparkles, Search } from "@/components/icons";
+import { navigation } from "@/lib/navigation";
+import { Menu, X, Search } from "@/components/icons";
+import { BranchedMenu } from "@/components/layout/branched-menu";
 
 function TriggerButton({
   open,
@@ -101,62 +100,6 @@ function useFocusTrap(
   }, [active, containerRef]);
 }
 
-interface DrawerItemProps {
-  item: {
-    href: string;
-    label: string;
-    icon: React.ComponentType<import("@/components/icons").IconProps>;
-    status: "ready" | "coming-soon";
-  };
-  onNavigate: () => void;
-}
-
-function DrawerItem({ item, onNavigate }: DrawerItemProps) {
-  const pathname = usePathname();
-  const isActive = pathname.toLowerCase() === item.href.toLowerCase();
-  const Icon = item.icon;
-  const isAiItem = item.href.includes("smart");
-
-  return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
-      className={[
-        "flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm transition-all duration-150",
-        isActive
-          ? "bg-purple-500/15 text-purple-200 font-semibold border border-purple-500/30 shadow-sm shadow-purple-950"
-          : "text-slate-300 hover:text-slate-100 hover:bg-slate-800/60 border border-transparent",
-      ].join(" ")}
-      aria-current={isActive ? "page" : undefined}
-    >
-      <span className="flex items-center gap-2.5">
-        <Icon
-          size={17}
-          strokeWidth={isActive ? 2 : 1.75}
-          className={
-            isActive
-              ? "text-purple-400 flex-shrink-0"
-              : "text-slate-400 flex-shrink-0"
-          }
-          aria-hidden="true"
-        />
-        <span>{item.label}</span>
-      </span>
-      {isAiItem && (
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-          <Sparkles size={10} className="text-purple-400" />
-          AI
-        </span>
-      )}
-      {item.status === "coming-soon" && (
-        <span className="text-[10px] font-medium text-slate-500 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800">
-          Soon
-        </span>
-      )}
-    </Link>
-  );
-}
-
 function DrawerContent({
   userDisplayName,
   onClose,
@@ -211,23 +154,14 @@ function DrawerContent({
         </div>
       )}
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5 overscroll-contain">
-        {navigation.map((section: NavSection) => (
-          <div key={section.label} className="space-y-1">
-            <p className="px-3 mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 select-none">
-              {section.label}
-            </p>
-            {section.items.map((item) => (
-              <DrawerItem
-                key={item.href}
-                item={item}
-                onNavigate={onClose}
-              />
-            ))}
-          </div>
-        ))}
-      </nav>
+      {/* Navigation — Branched Menu */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 overscroll-contain">
+        <BranchedMenu
+          items={navigation}
+          onNavigate={onClose}
+          width={280}
+        />
+      </div>
 
       {/* Footer */}
       <div className="flex-shrink-0 border-t border-white/[0.08] bg-[#090710] px-4 py-3">
