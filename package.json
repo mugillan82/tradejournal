@@ -17,6 +17,7 @@
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.3",
     "@google/genai": "^2.22.0",
+    "@gsap/react": "^2.1.2",
     "better-auth": "^1.7.3",
     "clsx": "^2.1.1",
     "framer-motion": "^13.4.0",
