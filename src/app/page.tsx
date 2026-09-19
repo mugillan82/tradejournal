@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerUser } from "@/lib/auth/session";
 import { ShuffleQuotes } from "@/components/ui/shuffle-quotes";
+import { StarBorder } from "@/components/ui/star-border";
 
 /**
  * / (Home)
@@ -36,19 +37,33 @@ export default async function HomePage() {
           <ShuffleQuotes />
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-          <Link
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
+          <StarBorder
+            as={Link}
             href="/sign-in"
-            className="inline-flex items-center justify-center rounded-lg bg-purple-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-purple-500 transition-all duration-150 shadow-lg shadow-purple-900/30 hover:shadow-purple-700/40"
+            color="#d946ef"
+            speed="6.5s"
+            thickness={2.5}
+            backgroundColor="#0f0f17"
+            textColor="#ffffff"
+            borderColor="rgba(217, 70, 239, 0.3)"
+            className="hover:scale-105 transition-transform duration-200 shadow-lg shadow-purple-950/40"
           >
             Sign in
-          </Link>
-          <Link
+          </StarBorder>
+          <StarBorder
+            as={Link}
             href="/sign-up"
-            className="inline-flex items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900/80 px-6 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800 hover:text-white transition-all duration-150"
+            color="#d946ef"
+            speed="6.5s"
+            thickness={2.5}
+            backgroundColor="#09090b"
+            textColor="#f1f5f9"
+            borderColor="rgba(255, 255, 255, 0.14)"
+            className="hover:scale-105 transition-transform duration-200 shadow-lg shadow-slate-950/40"
           >
             Create account
-          </Link>
+          </StarBorder>
         </div>
       </div>
     </main>
